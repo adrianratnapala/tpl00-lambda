@@ -8,7 +8,16 @@ CFLAGS = -std=c11 $(OPTFLAGS) $(COVFLAGS) -Wall -Wno-parentheses
 LDFLAGS= $(LDOPTFLAGS) $(COVFLAGS)
 CLANG_FORMAT=clang-format
 
-ifeq "$(COVERAGE)" "true"
+USE_VALGRIND?=no
+COVERAGE?=no
+TEST_MODE?=quick
+
+ifeq "$(TEST_MODE)" "full"
+COVERAGE=yes
+USE_VALGRIND=yes
+endif
+
+ifeq "$(COVERAGE)" "yes"
 COVFLAGS=-fprofile-arcs -ftest-coverage
 endif
 
@@ -24,14 +33,20 @@ $B/lambda: \
 $B/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
-coverage: test
+coverage: test_without_coverage
 	$(GCOVR) --fail-under-line 100
 
 progs: dirs $(PROGS)
 
-.PHONY: test
-test: dirs $(PROGS)
-	$(PY_TEST)
+.PHONY: test_without_coverage
+test_without_coverage: dirs $(PROGS)
+	USE_VALGRIND=$(USE_VALGRIND) $(PY_TEST)
+
+ifeq "$(COVERAGE)" "yes"
+test: coverage
+else
+test: test_without_coverage
+endif
 
 .PHONY: clean
 clean:

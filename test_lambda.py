@@ -5,10 +5,14 @@ import subprocess
 import sys
 from collections import namedtuple
 
-class Config:
-        command = ['valgrind', '-q', 'b/lambda']
-        seconds_per_command=0.5
+def use_valgrind():
+        uvg=os.environ.get('USE_VALGRIND')
+        return uvg.lower() in ('true', 'yes')
 
+class Config:
+        valgrind_command = ['valgrind', '-q'] if use_valgrind() else []
+        command = valgrind_command + ['b/lambda']
+        seconds_per_command=0.5
 
 config = Config()
 
