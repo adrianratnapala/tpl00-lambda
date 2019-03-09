@@ -1,0 +1,6 @@
+IndentWidth: 8
+PointerAlignment: Right
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterEnum: true
+  AfterFunction: true
