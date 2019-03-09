@@ -13,11 +13,11 @@
 extern void set_injected_faults(const char *faults);
 
 // Returns realloc(buf, n), except it reports failures to stderr and abort()s.
-void *realloc_or_die(void *buf, size_t n);
+extern void *realloc_or_die(void *buf, size_t n);
 
 // Returns zero if there is no error on `fin`, otherwise a negative number
 // There is an error on `fin` if `ferror(fin)` returns nonzero; there can also
 // be errors depending on fault-injection settings and contents of buf[0:n].
-int file_errnum(FILE *fin, void *buf, size_t n);
+extern int file_errnum(FILE *fin, void *buf, size_t n);
 
 #endif // UNTESTABLE_2018_03_03_H
