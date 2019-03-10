@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +10,7 @@
 
 static bool fault_unreadable_bangs = false;
 
-void *realloc_or_die(void *buf, size_t n)
+void *realloc_or_die(SrcLoc loc, void *buf, size_t n)
 {
         buf = realloc(buf, n);
         if (n && !buf) {
@@ -53,3 +54,28 @@ void set_injected_faults(const char *faults)
                 fault_unreadable_bangs = true;
         }
 }
+
+// LCOV_EXCL_START
+static int die_va(SrcLoc loc, const char *prefix, const char *zfmt, va_list va)
+{
+        fprintf(stderr, "%s:%d: error in `%s`", loc.file, loc.line, loc.func);
+        if (prefix) {
+                fprintf(stderr, " (%s)", prefix);
+        }
+        fputs(": ", stderr);
+        vfprintf(stderr, zfmt, va);
+        fputc('\n', stderr);
+        fflush(stderr);
+
+        va_end(va);
+        abort();
+        return -1;
+}
+
+int die(SrcLoc loc, const char *zfmt, ...)
+{
+        va_list va;
+        va_start(va, zfmt);
+        return die_va(loc, NULL, zfmt, va);
+}
+// LCOV_EXCL_STOP

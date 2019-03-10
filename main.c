@@ -58,7 +58,7 @@ static int read_whole_file(FILE *fin, char **obuf, size_t *osize)
         size_t used = 0;
         size_t alloced = 8192;
         int ern = 0;
-        char *buf = realloc_or_die(NULL, alloced);
+        char *buf = realloc_or_die(HERE, NULL, alloced);
 
         size_t n = 0;
         char *ptr = 0;
@@ -68,7 +68,7 @@ static int read_whole_file(FILE *fin, char **obuf, size_t *osize)
                         size_t rem = alloced - used;
                         errno = 0;
                         if (rem < 1024) {
-                                buf = realloc_or_die(buf, (alloced *= 2));
+                                buf = realloc_or_die(HERE, buf, (alloced *= 2));
                                 continue;
                         }
                         n = fread(ptr, 1, rem - 1, fin);
@@ -76,7 +76,7 @@ static int read_whole_file(FILE *fin, char **obuf, size_t *osize)
                 } while (!(ern = file_errnum(fin, ptr, n)) && !feof(fin));
 
         buf[used] = 0;
-        *obuf = realloc_or_die(buf, used + 1);
+        *obuf = realloc_or_die(HERE, buf, used + 1);
         *osize = used;
         return ern;
 }
