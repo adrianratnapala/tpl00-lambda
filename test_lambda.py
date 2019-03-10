@@ -1,5 +1,6 @@
 #!/usr/bin/env -S -i python3
 
+import re
 import os
 import subprocess
 import sys
@@ -21,11 +22,14 @@ Result = namedtuple('Result', [
         'err',
 ], defaults = (None, None))
 
-class R(Result): pass
+class R(Result):
+        def match_err(s, errre):
+                m = re.match(errre, s.err)
+                return R(out = s.out, err=m.groups() if m else None)
 
 class X(Result):
         @classmethod
-        def err(cls, xerr=True): return R(err=xerr)
+        def err(cls, xerr=()): return R(err=xerr)
 
         @classmethod
         def read(cls, xout): return X(out='%d %s\n' % (len(xout), xout))
@@ -72,7 +76,7 @@ def run_lambda(input, faults_to_inject=(), args=None):
                 # FIX: do something more intelligent please.
                 print("CalledProcessError = ", x)
                 print("==> LAMBDA stderr <<<===\n%s\n=========" % cp.stderr)
-                return R(err=True, out=None)
+                return R(err=cp.stderr.strip(), out=None)
         assert cp.stderr == ''
         return R(out=cp.stdout)
 
@@ -82,7 +86,7 @@ TEST_SOURCE_READ=dict(test_source_read=True)
 def test_bad_command_line_arg():
         assert X.err() == run_lambda('', args=dict(
                 I_am_a_very_bad_command_line_arg=True
-        ))
+        )).match_err('.*unrecognized option.*')
 
 def test_empty():
         assert X.read('') == run_lambda('', args=TEST_SOURCE_READ)
@@ -96,7 +100,8 @@ def test_big_error():
 
 def test_read_error():
         assert X.err() == run_lambda('bang! an EIO',
-                faults_to_inject={'unreadable-bangs'})
+                faults_to_inject={'unreadable-bangs'}).match_err('Error reading.*')
+
 
 def test_trivial_program():
         assert X.ok('(x)') == run_lambda('x')
