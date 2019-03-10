@@ -23,6 +23,11 @@ endif
 
 PROGS = $B/lambda
 
+# `built` builds from source, but to avoid dependencies, it doesn't
+# format source etc.
+build: progs
+
+# Like `build` but with additional goodies such as `clang-format`
 all: fmt progs
 
 $B/lambda: \

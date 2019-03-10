@@ -6,6 +6,21 @@ Author     : Adrian Ratnapala
 Copyright (C) 2019, Adrian Ratnapala, pusblished under the GNU Public License
 version 2.  See file [LICENSE](LICENSE).
 
+To the interpreter build, just run make:
+
+        make
+
+To result interpreter:
+
+        b/lambda < YOUR_SOURCE_CODE
+
+To run the tests, you can do:
+
+        TEST_MODE=full make clean all test
+
+But this requires lots of dependencies, such as `clang-format`, `valgrind`,
+`gcovr`, `py.test` and maybe other things I have forgotten.
+
 
 Part 0: Brack-cat
 -----------------
