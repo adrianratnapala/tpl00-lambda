@@ -6,7 +6,7 @@ import sys
 from collections import namedtuple
 
 def use_valgrind():
-        uvg=os.environ.get('USE_VALGRIND')
+        uvg=os.environ.get('USE_VALGRIND', 'no')
         return uvg.lower() in ('true', 'yes')
 
 class Config:
