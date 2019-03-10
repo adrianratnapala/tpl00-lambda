@@ -102,7 +102,6 @@ def test_read_error():
         assert X.err() == run_lambda('bang! an EIO',
                 faults_to_inject={'unreadable-bangs'}).match_err('Error reading.*')
 
-
 def test_trivial_program():
         assert X.ok('(x)') == run_lambda('x')
 
