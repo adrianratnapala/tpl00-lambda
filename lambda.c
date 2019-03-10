@@ -1,16 +1,265 @@
+#define _GNU_SOURCE
 #include <assert.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lambda.h"
+#include "untestable.h"
+
+#define MAX_AST_NODES 10000
+
+typedef struct AstNode AstNode;
+
+typedef struct AstNodeId {
+        int32_t n;
+} AstNodeId;
+
+typedef struct {
+        AstNodeId func;
+        AstNodeId arg;
+} AstCall;
+
+typedef struct {
+        uint32_t token;
+} AstFree;
+
+typedef enum
+{
+        ANT_UNDEFINED = 0,
+        ANT_FREE,
+        ANT_CALL,
+} AstNodeType;
+
+struct AstNode {
+        uint16_t type;
+        uint16_t pad2_3;
+        uint32_t pad5_8;
+
+        union {
+                AstCall CALL;
+                AstFree FREE;
+        };
+};
+
+static_assert(offsetof(AstNode, CALL) == sizeof(void *),
+              "AstNode union is in an unexpected place.");
+
+typedef struct {
+        const char *zname;
+        const char *zsrc;
+        uint32_t zsrc_len;
+        AstNodeId root;
+        uint32_t nnodes_alloced;
+        uint32_t nnodes;
+        AstNode nodes[];
+} Ast;
+
+// ------------------------------------------------------------------
+
+static AstNodeId ast_node_id_from_ptr(const Ast *ast, AstNode *p)
+{
+        size_t n = p - ast->nodes;
+        if (n >= ast->nnodes) {
+                die(HERE, "Can't get ID for out-of bounds noode at %ld", n);
+        }
+
+        return (AstNodeId){n};
+}
+
+static AstNode *ast_node_at(Ast *ast, AstNodeId id)
+{
+        if (id.n >= ast->nnodes) {
+                die(HERE, "Out-of-bounds node id %ul", id.n);
+        }
+        return ast->nodes + id.n;
+}
+
+static AstNode ast_node(const Ast *ast, AstNodeId id)
+{
+        return *ast_node_at((Ast *)ast, id);
+}
+
+static AstNode *ast_node_alloc(Ast *ast, size_t n)
+{
+        size_t u = ast->nnodes;
+        size_t nu = u + n;
+        if (nu > ast->nnodes_alloced) {
+                die(HERE, "BUG: %s is using %lu Ast nodes, only %d are alloced",
+                    ast->zname, nu, ast->nnodes_alloced);
+        }
+
+        ast->nnodes = nu;
+        return ast->nodes + u;
+}
+
+static void delete_ast(Ast *ast) { free(ast); }
+
+// ------------------------------------------------------------------
+
+static const char *eat_white(const char *z0)
+{
+        for (;; z0++) {
+                char ch = *z0;
+                switch (ch) {
+                case ' ':
+                case '\t':
+                case '\n':
+                        continue;
+                default:
+                        return z0;
+                }
+        }
+}
+
+static const char *lex_varname(uint32_t *idxptr, const char *z0)
+{
+        uint8_t idx = (uint8_t)*z0 - (uint8_t)'a';
+        if (idx > ('z' - 'a')) {
+                return NULL;
+        }
+        *idxptr = idx;
+
+        z0++;
+        idx = (uint8_t)*z0 - (uint8_t)'a';
+        // FIX: this should be a parse function.
+        if (idx <= ('z' - 'a')) {
+                die(HERE, "Multi-byte varnames are not permitted.  '%.*s...',",
+                    10, z0 - 1);
+        }
+        return z0;
+}
+
+static const char *parse_expr(Ast *ast, const char *z0);
+
+static const char *parse_non_call_expr(Ast *ast, const char *z0)
+{
+        uint32_t token;
+        const char *zE = lex_varname(&token, z0);
+        if (zE) {
+                if (token + 'a' > 'z') {
+                        die(HERE, "Bad token %u.", token);
+                }
+
+                AstNode *pn = ast_node_alloc(ast, 1);
+                *pn = (AstNode){
+                    .type = ANT_FREE,
+                    .FREE = {.token = token},
+                };
+
+                ast->root = ast_node_id_from_ptr(ast, pn);
+                return zE;
+        }
+
+        switch (*z0) {
+        case '(':
+                zE = parse_expr(ast, z0 + 1);
+                if (!zE || *zE != ')') {
+                        die(HERE, "Unmatched '('");
+                        return zE;
+                }
+                return zE + 1;
+                // ... more cases here later ...
+        }
+
+        return NULL;
+}
+
+static const char *parse_expr(Ast *ast, const char *z0)
+{
+        const char *z = eat_white(z0);
+
+        z = parse_non_call_expr(ast, z);
+        if (!z) {
+                die(HERE, "%s: expected expr.", ast->zname);
+        }
+
+        for (;;) {
+                AstNodeId func = ast->root;
+
+                z = eat_white(z);
+                const char *z1 = parse_non_call_expr(ast, z);
+                if (!z1) {
+                        return z;
+                }
+                z = z1;
+                AstNode *call = ast_node_alloc(ast, 1);
+                *call = (AstNode){.type = ANT_CALL,
+                                  .CALL = {
+                                      .func = func,
+                                      .arg = ast->root,
+                                  }};
+                ast->root = ast_node_id_from_ptr(ast, call);
+        }
+}
+
+static Ast *parse(const char *zname, const char *zsrc)
+{
+        size_t n = strlen(zsrc);
+        if (n > MAX_AST_NODES) {
+                die(HERE,
+                    "Source of %s is too long.\n"
+                    "  It has has %lu bytes.\n"
+                    "  Max allowed is %u.",
+                    zname, n, MAX_AST_NODES);
+        }
+        // FIX: allocating too few.
+        Ast *ast = realloc_or_die(HERE, 0, sizeof(Ast) + sizeof(AstNode) * n);
+        *ast = (Ast){
+            .zname = zname,
+            .zsrc = zsrc,
+            .zsrc_len = (int32_t)n,
+            .nnodes_alloced = n,
+        };
+        for (int k = 0; k < n; k++) {
+                ast->nodes[k] = (AstNode){0};
+        }
+
+        const char *zE = parse_expr(ast, zsrc);
+        if (*zE) {
+                die(HERE, "Unused bytes after program source: '%.*s...'", 10,
+                    zE);
+        }
+
+        return ast;
+}
+
+// ------------------------------------------------------------------
+
+void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
+{
+        AstNode node = ast_node(ast, root);
+        switch ((AstNodeType)node.type) {
+        case ANT_UNDEFINED:
+                die(HERE, "unparsing blank (ant_undefined) ast node.");
+                return;
+        case ANT_FREE:
+                fputc(node.FREE.token + 'a', oot);
+                return;
+        case ANT_CALL:
+                fputc('(', oot);
+                unparse(oot, ast, node.CALL.func);
+                fputc(' ', oot);
+                unparse(oot, ast, node.CALL.arg);
+                fputc(')', oot);
+                return;
+        }
+        die(HERE, "unparsing found ast node with invalid type id %u",
+            node.type);
+}
+
+// ------------------------------------------------------------------
 
 extern void interpret(FILE *oot, size_t src_len, const char *zsrc)
 {
         assert(!zsrc[src_len]);
         assert(strlen(zsrc) == src_len);
 
-        fputc('(', oot);
-        fputs(zsrc, oot);
-        fputc(')', oot);
+        Ast *ast = parse("FIX", zsrc);
+        unparse(oot, ast, ast->root);
         fputc('\n', oot);
         fflush(oot);
+        delete_ast(ast);
 }

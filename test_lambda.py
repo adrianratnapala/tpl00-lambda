@@ -25,11 +25,12 @@ Result = namedtuple('Result', [
 class R(Result):
         def match_err(s, errre):
                 m = re.match(errre, s.err)
-                return R(out = s.out, err=m.groups() if m else None)
+                if not m: return s
+                return R(out = s.out, err=m.groups())
 
 class X(Result):
         @classmethod
-        def err(cls, xerr=()): return R(err=xerr)
+        def err(cls, *args): return R(err=tuple(args))
 
         @classmethod
         def read(cls, xout): return X(out='%d %s\n' % (len(xout), xout))
@@ -103,5 +104,16 @@ def test_read_error():
                 faults_to_inject={'unreadable-bangs'}).match_err('Error reading.*')
 
 def test_trivial_program():
-        assert X.ok('(x)') == run_lambda('x')
+        assert X.ok('x') == run_lambda('x')
 
+def test_single_call():
+        assert X.ok('(x y)') == run_lambda('x y')
+
+def test_single_call_with_explicit_parens():
+        assert X.ok('(x y)') == run_lambda('(x y)')
+
+def test_auto_left_associated_call():
+        assert X.ok('((x y) z)') == run_lambda('x y z')
+
+def test_forced_right_associated_call():
+        assert X.ok('((x y) z)') == run_lambda('x y z')

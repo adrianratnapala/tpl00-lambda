@@ -56,3 +56,45 @@ The code that is on topic is in `lambda.c`, which is very exciting:
                 fputc('\n', oot);
                 fflush(oot);
         }
+
+
+Part 1: Left-associativity
+--------------------------
+
+Lets make the language implement left-associativity of function application.
+
+What?
+
+I mean if we have the program text:
+
+        x y z
+
+We get the output:
+
+        ((x y) z)
+
+I.e. `y` got paired with `x` (to the left) rather than `z` to the right.
+We can override this default with explicit parentheses.  Thus input:
+
+        x (y z)
+
+yields the output:
+
+        ((x y) z)
+
+
+## Parsing
+
+There might be a clever way to implement the above without parsing into an AST
+and then printing out the AST, but we want an AST anyway so we might as well
+write a parser.
+
+It implements the following grammar:
+
+        varname         ::= [a-z]
+        non-call-expr   ::= varname | '(' expr ')'
+        expr            ::= non-call-expr | expr non-call-expr
+
+FIX: While the words in this grammar correspond to parser function names,
+neither corresponds to AST node types.  Fix or explain.
+
