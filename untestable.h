@@ -28,7 +28,8 @@ extern void *realloc_or_die(SrcLoc loc, void *buf, size_t n);
 extern int file_errnum(FILE *fin, void *buf, size_t n);
 
 // Format zmsg to stderr, then abort().
-extern int die(SrcLoc loc, const char *zmsg, ...);
+extern int die(SrcLoc loc, const char *zmsg, ...)
+    __attribute__((format(printf, 2, 3)));
 
 // If (COND) is nonzero, print it and format zmsg to stdout, then abort().
 // This check is unconditional, regardless s of macros like NDEBUG etc.  COND
@@ -39,6 +40,7 @@ extern int die(SrcLoc loc, const char *zmsg, ...);
                 if (COND)                                                      \
                         die_if(HERE, #COND, __VA_ARGS__);                      \
         } while (0)
-extern int die_if(SrcLoc loc, const char *cond, const char *zmsg, ...);
+extern int die_if(SrcLoc loc, const char *cond, const char *zmsg, ...)
+    __attribute__((format(printf, 3, 4)));
 
 #endif // UNTESTABLE_2018_03_03_H
