@@ -78,4 +78,11 @@ int die(SrcLoc loc, const char *zfmt, ...)
         va_start(va, zfmt);
         return die_va(loc, NULL, zfmt, va);
 }
+
+int die_if(SrcLoc loc, const char *cond, const char *zfmt, ...)
+{
+        va_list va;
+        va_start(va, zfmt);
+        return die_va(loc, cond, zfmt, va);
+}
 // LCOV_EXCL_STOP

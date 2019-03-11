@@ -30,4 +30,15 @@ extern int file_errnum(FILE *fin, void *buf, size_t n);
 // Format zmsg to stderr, then abort().
 extern int die(SrcLoc loc, const char *zmsg, ...);
 
+// If (COND) is nonzero, print it and format zmsg to stdout, then abort().
+// This check is unconditional, regardless s of macros like NDEBUG etc.  COND
+// is always evaluated exactly once.  But the zmsg... is only formated if COND
+// is true.
+#define DIE_IF(COND, ...)                                                      \
+        do {                                                                   \
+                if (COND)                                                      \
+                        die_if(HERE, #COND, __VA_ARGS__);                      \
+        } while (0)
+extern int die_if(SrcLoc loc, const char *cond, const char *zmsg, ...);
+
 #endif // UNTESTABLE_2018_03_03_H
