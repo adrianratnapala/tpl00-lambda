@@ -168,22 +168,27 @@ static const char *eat_white(const char *z0)
         }
 }
 
-static const char *lex_varname(uint32_t *idxptr, const char *z0)
+static uint8_t idx_from_letter(char c) { return (uint8_t)c - (uint8_t)'a'; }
+
+static const char *lex_varname(Ast *ast, uint32_t *idxptr, const char *z0)
 {
-        uint8_t idx = (uint8_t)*z0 - (uint8_t)'a';
-        if (idx > ('z' - 'a')) {
+        uint8_t idx = idx_from_letter(*z0);
+        if (idx >= 26) {
                 return NULL;
         }
         *idxptr = idx;
 
-        z0++;
-        idx = (uint8_t)*z0 - (uint8_t)'a';
-        // FIX: this should be a parse function.
-        if (idx <= ('z' - 'a')) {
-                die(HERE, "Multi-byte varnames are not permitted.  '%.*s...',",
-                    10, z0 - 1);
+        const char *z = z0 + 1;
+        if (idx_from_letter(*z) >= 26) {
+                return z;
         }
-        return z0;
+
+        add_syntax_error(
+            ast, z0, "Multi-byte varnames aren't allowed.  '%.*s...'", 10, z0);
+        do
+                z++;
+        while (idx_from_letter(*z) < 26);
+        return z;
 }
 
 static const char *parse_expr(Ast *ast, const char *z0);
@@ -191,7 +196,7 @@ static const char *parse_expr(Ast *ast, const char *z0);
 static const char *parse_non_call_expr(Ast *ast, const char *z0)
 {
         uint32_t token;
-        const char *zE = lex_varname(&token, z0);
+        const char *zE = lex_varname(ast, &token, z0);
         if (zE) {
                 DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
 
@@ -249,7 +254,8 @@ static const char *parse_expr(Ast *ast, const char *z0)
 
 static Ast *parse(const char *zname, const char *zsrc)
 {
-        size_t n = strlen(zsrc);
+        size_t n = strlen(zsrc) * 20;
+        // FIX: dynamically reallocate them
         if (n > MAX_AST_NODES) {
                 die(HERE,
                     "Source of %s is too long.\n"
@@ -257,7 +263,7 @@ static Ast *parse(const char *zname, const char *zsrc)
                     "  Max allowed is %u.",
                     zname, n, MAX_AST_NODES);
         }
-        // FIX: allocating too few.
+
         Ast *ast = realloc_or_die(HERE, 0, sizeof(Ast) + sizeof(AstNode) * n);
         *ast = (Ast){
             .zname = zname,

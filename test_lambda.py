@@ -134,3 +134,7 @@ def test_forced_right_associated_call():
 def test_parse_error_unmatched_paren():
         assert X.err('FIX', 0, "Unmatched '('") == \
                 run_lambda('(x').parse_err()
+
+def test_parse_error_multi_byte_varname():
+        assert X.err('FIX', 0, "Multi-byte varnames aren't allowed.  'var...'") == \
+                run_lambda('var').parse_err()
