@@ -9,8 +9,6 @@
 #include "lambda.h"
 #include "untestable.h"
 
-#define MAX_AST_NODES 10000
-
 typedef struct AstNode AstNode;
 
 typedef struct AstNodeId {
@@ -254,15 +252,7 @@ static const char *parse_expr(Ast *ast, const char *z0)
 
 static Ast *parse(const char *zname, const char *zsrc)
 {
-        size_t n = strlen(zsrc) * 20;
-        // FIX: dynamically reallocate them
-        if (n > MAX_AST_NODES) {
-                die(HERE,
-                    "Source of %s is too long.\n"
-                    "  It has has %lu bytes.\n"
-                    "  Max allowed is %u.",
-                    zname, n, MAX_AST_NODES);
-        }
+        size_t n = strlen(zsrc) + 8;
 
         Ast *ast = realloc_or_die(HERE, 0, sizeof(Ast) + sizeof(AstNode) * n);
         *ast = (Ast){
