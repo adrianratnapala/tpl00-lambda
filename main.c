@@ -104,5 +104,5 @@ int main(int argc, char *const *argv)
                 return 0;
         }
 
-        return interpret(stdout, size, buf) ? 1 : 0;
+        return interpret(stdout, "STDIN", size, buf) ? 1 : 0;
 }

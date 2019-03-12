@@ -294,12 +294,12 @@ void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
 
 // ------------------------------------------------------------------
 
-int interpret(FILE *oot, size_t src_len, const char *zsrc)
+int interpret(FILE *oot, const char *zname, size_t src_len, const char *zsrc)
 {
         assert(!zsrc[src_len]);
         assert(strlen(zsrc) == src_len);
 
-        Ast *ast = parse("FIX", zsrc);
+        Ast *ast = parse(zname, zsrc);
         int nerr = report_syntax_errors(stderr, ast);
         if (!nerr) {
                 unparse(oot, ast, ast->root);

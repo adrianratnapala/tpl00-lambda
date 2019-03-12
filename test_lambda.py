@@ -97,6 +97,9 @@ def run_lambda(input, faults_to_inject=(), args=None):
 
 TEST_SOURCE_READ=dict(test_source_read=True)
 
+def FILENAME():
+        return "STDIN"
+
 def test_bad_command_line_arg():
         assert X.err() == run_lambda('', args=dict(
                 I_am_a_very_bad_command_line_arg=True
@@ -132,13 +135,13 @@ def test_forced_right_associated_call():
         assert X.ok('((x y) z)') == run_lambda('x y z')
 
 def test_parse_error_unmatched_paren():
-        assert X.err('FIX', 0, "Unmatched '('") == \
+        assert X.err(FILENAME(), 0, "Unmatched '('") == \
                 run_lambda('(x').parse_err()
 
 def test_parse_error_multi_byte_varname():
-        assert X.err('FIX', 0, "Multi-byte varnames aren't allowed.  'var...'") == \
+        assert X.err(FILENAME(), 0, "Multi-byte varnames aren't allowed.  'var...'") == \
                 run_lambda('var').parse_err()
 
 def test_parse_error_expected_expr():
-        assert X.err('FIX', 0, "Expected expr") == run_lambda('').parse_err()
+        assert X.err(FILENAME(), 0, "Expected expr") == run_lambda('').parse_err()
 
