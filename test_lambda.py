@@ -27,14 +27,18 @@ class R(Result):
         number_re="[0-9]+"
 
         def match_err(s, errre):
-                m = re.match(errre, s.err)
+                if len(s.err) < 1:
+                        return s
+                m = re.match(errre, s.err[0])
                 if not m: return s
                 return R(out = s.out, err=m.groups())
 
         parse_re = re.compile("(%s):(%s): Syntax error: (.*)[.]" %\
                 (fname_re, number_re))
         def parse_err(s):
-                m = s.parse_re.match(s.err or '')
+                if len(s.err) < 1:
+                        return s
+                m = s.parse_re.match(s.err[0] or '')
                 if not m:
                         raise ValueError('"%s" !~ /%r/'
                                 % (s.err, s.parse_re))
@@ -87,10 +91,11 @@ def run_lambda(input, faults_to_inject=(), args=None):
                         timeout=config.seconds_per_command)
                 cp.check_returncode()
         except subprocess.CalledProcessError as x:
-                # FIX: do something more intelligent please.
                 print("CalledProcessError = ", x)
                 print("==> LAMBDA stderr <<<===\n%s\n=========" % cp.stderr)
-                return R(err=cp.stderr.strip(), out=None)
+                elines = (line.strip() for line in  cp.stderr.split('\n'))
+                elines = [line for line in elines if line]
+                return R(err=elines, out=None)
         assert cp.stderr == ''
         return R(out=cp.stdout)
 
