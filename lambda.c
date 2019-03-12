@@ -70,18 +70,15 @@ typedef struct {
 static AstNodeId ast_node_id_from_ptr(const Ast *ast, AstNode *p)
 {
         size_t n = p - ast->nodes;
-        if (n >= ast->nnodes) {
-                die(HERE, "Can't get ID for out-of bounds noode at %ld", n);
-        }
+        DIE_IF(n >= ast->nnodes, "Can't get ID for out-of bounds noode at %ld",
+               n);
 
         return (AstNodeId){n};
 }
 
 static AstNode *ast_node_at(Ast *ast, AstNodeId id)
 {
-        if (id.n >= ast->nnodes) {
-                die(HERE, "Out-of-bounds node id %ul", id.n);
-        }
+        DIE_IF(id.n >= ast->nnodes, "Out-of-bounds node id %ul", id.n);
         return ast->nodes + id.n;
 }
 
@@ -94,10 +91,9 @@ static AstNode *ast_node_alloc(Ast *ast, size_t n)
 {
         size_t u = ast->nnodes;
         size_t nu = u + n;
-        if (nu > ast->nnodes_alloced) {
-                die(HERE, "BUG: %s is using %lu Ast nodes, only %d are alloced",
-                    ast->zname, nu, ast->nnodes_alloced);
-        }
+        DIE_IF(nu > ast->nnodes_alloced,
+               "BUG: %s is using %lu Ast nodes, only %d are alloced",
+               ast->zname, nu, ast->nnodes_alloced);
 
         ast->nnodes = nu;
         return ast->nodes + u;
@@ -197,9 +193,7 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
         uint32_t token;
         const char *zE = lex_varname(&token, z0);
         if (zE) {
-                if (token + 'a' > 'z') {
-                        die(HERE, "Bad token %u.", token);
-                }
+                DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
 
                 AstNode *pn = ast_node_alloc(ast, 1);
                 *pn = (AstNode){
