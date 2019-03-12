@@ -27,6 +27,10 @@ extern void *realloc_or_die(SrcLoc loc, void *buf, size_t n);
 // be errors depending on fault-injection settings and contents of buf[0:n].
 extern int file_errnum(FILE *fin, void *buf, size_t n);
 
+// Exactly the same as die(HERE, ...) except coverage doesn't count the line.
+// Used this for code you expect to be unreachable.
+#define DIE_LCOV_EXCL_LINE(...) die(HERE, __VA_ARGS__)
+
 // Format zmsg to stderr, then abort().
 extern int die(SrcLoc loc, const char *zmsg, ...)
     __attribute__((format(printf, 2, 3)));

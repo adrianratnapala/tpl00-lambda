@@ -298,8 +298,8 @@ void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
                 fputc(')', oot);
                 return;
         }
-        die(HERE, "unparsing found ast node with invalid type id %u",
-            node.type);
+        DIE_LCOV_EXCL_LINE("unparsing found ast node with invalid type id %u",
+                           node.type);
 }
 
 // ------------------------------------------------------------------
