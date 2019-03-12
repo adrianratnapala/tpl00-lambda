@@ -138,3 +138,7 @@ def test_parse_error_unmatched_paren():
 def test_parse_error_multi_byte_varname():
         assert X.err('FIX', 0, "Multi-byte varnames aren't allowed.  'var...'") == \
                 run_lambda('var').parse_err()
+
+def test_parse_error_expected_expr():
+        assert X.err('FIX', 0, "Expected expr") == run_lambda('').parse_err()
+

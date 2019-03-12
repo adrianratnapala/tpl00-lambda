@@ -226,11 +226,12 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
 
 static const char *parse_expr(Ast *ast, const char *z0)
 {
-        const char *z = eat_white(z0);
+        z0 = eat_white(z0);
 
-        z = parse_non_call_expr(ast, z);
+        const char *z = parse_non_call_expr(ast, z0);
         if (!z) {
-                die(HERE, "%s: expected expr.", ast->zname);
+                add_syntax_error(ast, z0, "Expected expr");
+                return z0;
         }
 
         for (;;) {
@@ -317,8 +318,10 @@ extern void interpret(FILE *oot, size_t src_len, const char *zsrc)
 
         Ast *ast = parse("FIX", zsrc);
         int nerr = report_syntax_errors(stderr, ast);
-        unparse(oot, ast, ast->root);
-        fputc('\n', oot);
+        if (!nerr) {
+                unparse(oot, ast, ast->root);
+                fputc('\n', oot);
+        }
         fflush(oot);
         delete_ast(ast);
 
