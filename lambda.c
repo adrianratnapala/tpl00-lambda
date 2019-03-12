@@ -28,8 +28,7 @@ typedef struct {
 
 typedef enum
 {
-        ANT_UNDEFINED = 0,
-        ANT_FREE,
+        ANT_FREE = 1,
         ANT_CALL,
 } AstNodeType;
 
@@ -288,9 +287,6 @@ void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
 {
         AstNode node = ast_node(ast, root);
         switch ((AstNodeType)node.type) {
-        case ANT_UNDEFINED:
-                die(HERE, "unparsing blank (ant_undefined) ast node.");
-                return;
         case ANT_FREE:
                 fputc(node.FREE.token + 'a', oot);
                 return;
