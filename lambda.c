@@ -47,9 +47,17 @@ struct AstNode {
 static_assert(offsetof(AstNode, CALL) == sizeof(void *),
               "AstNode union is in an unexpected place.");
 
+typedef struct SyntaxError SyntaxError;
+struct SyntaxError {
+        SyntaxError *prev;
+
+        char *zmsg;
+};
+
 typedef struct {
         const char *zname;
         const char *zsrc;
+        SyntaxError *error;
         uint32_t zsrc_len;
         AstNodeId root;
         uint32_t nnodes_alloced;
@@ -95,7 +103,57 @@ static AstNode *ast_node_alloc(Ast *ast, size_t n)
         return ast->nodes + u;
 }
 
-static void delete_ast(Ast *ast) { free(ast); }
+static SyntaxError *add_syntax_error(Ast *ast, const char *zloc,
+                                     const char *zfmt, ...)
+{
+        size_t n = zloc - ast->zsrc;
+        DIE_IF(n > ast->zsrc_len, "Creating error at invalid source loc %ld",
+               n);
+        SyntaxError *e = realloc_or_die(HERE, 0, sizeof(SyntaxError));
+        *e = (SyntaxError){.prev = ast->error};
+
+        char *prefix = NULL, *suffix = NULL;
+
+        int nprefix =
+            asprintf(&prefix, "%s:%lu: Syntax error: ", ast->zname, n);
+        DIE_IF(nprefix < 0 || !prefix, "Couldn't format syntax_error location");
+
+        va_list va;
+        va_start(va, zfmt);
+        int nsuffix = vasprintf(&suffix, zfmt, va);
+        va_end(va);
+        DIE_IF(nsuffix < 0 || !suffix, "Couldn't format %s%s...", prefix, zfmt);
+
+        size_t len = nprefix + nsuffix + 1;
+        prefix = realloc_or_die(HERE, prefix, len + 1);
+        memcpy(prefix + nprefix, suffix, nsuffix);
+        prefix[len - 1] = '.';
+        prefix[len] = 0;
+
+        e->zmsg = prefix;
+        return ast->error = e;
+}
+
+static int report_syntax_errors(FILE *oot, Ast *ast)
+{
+        int n = 0;
+        for (const SyntaxError *pe = ast->error; pe; pe = pe->prev, n++) {
+                fputs(pe->zmsg, oot);
+                fputc('\n', oot);
+        }
+        return n;
+}
+
+static void delete_ast(Ast *ast)
+{
+        SyntaxError *e, *pe = ast->error;
+        while ((e = pe)) {
+                pe = e->prev;
+                free(e->zmsg);
+                free(e);
+        }
+        free(ast);
+}
 
 // ------------------------------------------------------------------
 
@@ -157,7 +215,7 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
         case '(':
                 zE = parse_expr(ast, z0 + 1);
                 if (!zE || *zE != ')') {
-                        die(HERE, "Unmatched '('");
+                        add_syntax_error(ast, z0, "Unmatched '('");
                         return zE;
                 }
                 return zE + 1;
@@ -258,8 +316,14 @@ extern void interpret(FILE *oot, size_t src_len, const char *zsrc)
         assert(strlen(zsrc) == src_len);
 
         Ast *ast = parse("FIX", zsrc);
+        int nerr = report_syntax_errors(stderr, ast);
         unparse(oot, ast, ast->root);
         fputc('\n', oot);
         fflush(oot);
         delete_ast(ast);
+
+        // FIX: return the error to main.
+        if (nerr) {
+                exit(1);
+        }
 }

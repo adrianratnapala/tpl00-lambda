@@ -23,10 +23,23 @@ Result = namedtuple('Result', [
 ], defaults = (None, None))
 
 class R(Result):
+        fname_re="[a-zA-Z0-9_.]+"
+        number_re="[0-9]+"
+
         def match_err(s, errre):
                 m = re.match(errre, s.err)
                 if not m: return s
                 return R(out = s.out, err=m.groups())
+
+        parse_re = re.compile("(%s):(%s): Syntax error: (.*)[.]" %\
+                (fname_re, number_re))
+        def parse_err(s):
+                m = s.parse_re.match(s.err or '')
+                if not m:
+                        raise ValueError('"%s" !~ /%r/'
+                                % (s.err, s.parse_re))
+                return R(err = (m[1], int(m[2]), m[3]))
+
 
 class X(Result):
         @classmethod
@@ -117,3 +130,7 @@ def test_auto_left_associated_call():
 
 def test_forced_right_associated_call():
         assert X.ok('((x y) z)') == run_lambda('x y z')
+
+def test_parse_error_unmatched_paren():
+        assert X.err('FIX', 0, "Unmatched '('") == \
+                run_lambda('(x').parse_err()
