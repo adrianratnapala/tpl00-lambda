@@ -294,7 +294,7 @@ void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
 
 // ------------------------------------------------------------------
 
-extern void interpret(FILE *oot, size_t src_len, const char *zsrc)
+int interpret(FILE *oot, size_t src_len, const char *zsrc)
 {
         assert(!zsrc[src_len]);
         assert(strlen(zsrc) == src_len);
@@ -307,9 +307,5 @@ extern void interpret(FILE *oot, size_t src_len, const char *zsrc)
         }
         fflush(oot);
         delete_ast(ast);
-
-        // FIX: return the error to main.
-        if (nerr) {
-                exit(1);
-        }
+        return nerr;
 }
