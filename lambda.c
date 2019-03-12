@@ -277,10 +277,7 @@ static Ast *parse(const char *zname, const char *zsrc)
         }
 
         const char *zE = parse_expr(ast, zsrc);
-        if (*zE) {
-                die(HERE, "Unused bytes after program source: '%.*s...'", 10,
-                    zE);
-        }
+        DIE_IF(*zE, "Unused bytes after program source: '%.*s...'", 10, zE);
 
         return ast;
 }
