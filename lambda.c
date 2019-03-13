@@ -56,7 +56,6 @@ typedef struct {
         const char *zsrc;
         SyntaxError *error;
         uint32_t zsrc_len;
-        AstNodeId root;
         uint32_t nnodes_alloced;
         uint32_t nnodes;
         AstNode nodes[];
@@ -64,13 +63,11 @@ typedef struct {
 
 // ------------------------------------------------------------------
 
-static AstNodeId ast_node_id_from_ptr(const Ast *ast, AstNode *p)
+static AstNodeId ast_root(Ast *ast)
 {
-        size_t n = p - ast->nodes;
-        DIE_IF(n >= ast->nnodes, "Can't get ID for out-of bounds noode at %ld",
-               n);
-
-        return (AstNodeId){n};
+        uint32_t nnodes = ast->nnodes;
+        DIE_IF(!nnodes, "Empty AST has no root");
+        return (AstNodeId){nnodes - 1};
 }
 
 static AstNode *ast_node_at(Ast *ast, AstNodeId id)
@@ -203,7 +200,6 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
                     .FREE = {.token = token},
                 };
 
-                ast->root = ast_node_id_from_ptr(ast, pn);
                 return zE;
         }
 
@@ -232,10 +228,11 @@ static const char *parse_expr(Ast *ast, const char *z0)
         }
 
         for (;;) {
-                AstNodeId func = ast->root;
-
+                AstNodeId func = ast_root(ast);
                 z = eat_white(z);
                 const char *z1 = parse_non_call_expr(ast, z);
+                AstNodeId arg = ast_root(ast);
+
                 if (!z1) {
                         return z;
                 }
@@ -244,9 +241,8 @@ static const char *parse_expr(Ast *ast, const char *z0)
                 *call = (AstNode){.type = ANT_CALL,
                                   .CALL = {
                                       .func = func,
-                                      .arg = ast->root,
+                                      .arg = arg,
                                   }};
-                ast->root = ast_node_id_from_ptr(ast, call);
         }
 }
 
@@ -302,7 +298,7 @@ int interpret(FILE *oot, const char *zname, size_t src_len, const char *zsrc)
         Ast *ast = parse(zname, zsrc);
         int nerr = report_syntax_errors(stderr, ast);
         if (!nerr) {
-                unparse(oot, ast, ast->root);
+                unparse(oot, ast, ast_root(ast));
                 fputc('\n', oot);
         }
         fflush(oot);
