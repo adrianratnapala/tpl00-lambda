@@ -16,7 +16,7 @@ typedef struct AstNodeId {
 } AstNodeId;
 
 typedef struct {
-        AstNodeId func;
+        uint32_t arg_size;
 } AstCall;
 
 typedef struct {
@@ -83,13 +83,16 @@ static const AstNode *ast_node_at(const Ast *ast, AstNodeId id)
         return ast->nodes + id.n;
 }
 
-static const AstNode *ast_call_arg(const Ast *ast, const AstNode *call)
+static void ast_call_unpack(const Ast *ast, const AstNode *call,
+                            const AstNode **f, const AstNode **x)
 {
         int32_t idx = call - ast->nodes;
         DIE_IF(call->type != ANT_CALL, "%s called, on non-call node %u",
                __func__, idx);
         DIE_IF(idx < 2, "CALL node found at idx %u", idx);
-        return call - 1;
+        const AstNode *arg = call - 1;
+        *x = arg;
+        *f = arg - call->CALL.arg_size;
 }
 
 static AstNode *ast_node_alloc(Ast *ast, size_t n)
@@ -242,16 +245,15 @@ static const char *parse_expr(Ast *ast, const char *z0)
                 AstNodeId func = ast_root(ast);
                 z = eat_white(z);
                 const char *z1 = parse_non_call_expr(ast, z);
+                uint32_t arg_size = ast_root(ast).n - func.n;
 
                 if (!z1) {
                         return z;
                 }
                 z = z1;
                 AstNode *call = ast_node_alloc(ast, 1);
-                *call = (AstNode){.type = ANT_CALL,
-                                  .CALL = {
-                                      .func = func,
-                                  }};
+                *call =
+                    (AstNode){.type = ANT_CALL, .CALL = {.arg_size = arg_size}};
         }
 }
 
@@ -281,17 +283,18 @@ static Ast *parse(const char *zname, const char *zsrc)
 void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
 {
         const AstNode *pnode = ast_node_at(ast, root);
+        const AstNode *f, *x;
         AstNode node = *pnode;
         switch ((AstNodeType)node.type) {
         case ANT_FREE:
                 fputc(node.FREE.token + 'a', oot);
                 return;
         case ANT_CALL:
+                ast_call_unpack(ast, pnode, &f, &x);
                 fputc('(', oot);
-                unparse(oot, ast, node.CALL.func);
+                unparse(oot, ast, ast_node_id_from_ptr(ast, f));
                 fputc(' ', oot);
-                unparse(oot, ast,
-                        ast_node_id_from_ptr(ast, ast_call_arg(ast, pnode)));
+                unparse(oot, ast, ast_node_id_from_ptr(ast, x));
                 fputc(')', oot);
                 return;
         }
