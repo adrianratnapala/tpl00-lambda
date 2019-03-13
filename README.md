@@ -3,14 +3,14 @@ Terrible Programming Language 1: The lambda-calculus
 
 Author     : Adrian Ratnapala
 
-Copyright (C) 2019, Adrian Ratnapala, pusblished under the GNU Public License
+Copyright (C) 2019, Adrian Ratnapala, published under the GNU Public License
 version 2.  See file [LICENSE](LICENSE).
 
-To the interpreter build, just run make:
+To build the interpreter, just run make:
 
         make
 
-To result interpreter:
+To run interpreter, do:
 
         b/lambda < YOUR_SOURCE_CODE
 
@@ -61,11 +61,12 @@ The code that is on topic is in `lambda.c`, which is very exciting:
 Part 1: Left-associativity
 --------------------------
 
-Lets make the language implement left-associativity of function application.
+To step towards a real language, lets make it  implement left-associativity of
+function application.
 
 What?
 
-We are trying to implement the [Lambda Calculus][wiki-lc] which is what [Alonzo
+We are trying to implement the [Lambda Calculus][wiki-lc], which is what [Alonzo
 Church][wiki-ac] came up with when he showed how arbitrary computation could be
 represented with nothing but function application.  The language contains
 nothing but function-literals and variables (which are placeholders for
@@ -74,11 +75,10 @@ functions and their args).
 [wiki-lc]: https://en.wikipedia.org/wiki/Lambda_calculus
 [wiki-lc]: https://en.wikipedia.org/wiki/Alonzo_Church
 
-
 Our first step is to drop even the functions, and have only variables which
 behave like functions syntactically.  In particular stringing variables
 together means applying them to each other as functions, left-associatively.  I
-mean if we have the program text:
+that mean if we have the program text:
 
         x y z
 
@@ -112,7 +112,7 @@ Our parser implements the following grammar:
 
 The parser is a top-down parser in which each of the elements above corresponds
 to a function with a name beginning with `parse_` or `lex_`.  These parse
-whatever thing it is named after and return the result (into the AST for
+whatever thing they are named after and return the result (into the AST for
 `parse_*`, and into a caller-supplied location for `lex_*`).
 
 So grammar rules and parser-internal functions map onto each other closely.  But
@@ -131,19 +131,9 @@ what about node types in the AST?  Each node is of the form:
 
 So there are three data-types in all, `AstCall` and `AstFree` for the two types
 of node, and `AstNode` itself which can be either.  These don't map very
-obvious onto the syntax.  But all is not lost!
+obviously onto the syntax.
 
-* `AstFree` actually maps exactly onto `varname` (it's called a "free
-  variable").
-
-* `expr` and `non-call-expr` are placeholders for multiple types,
-
-* and whatever is an `expr` but not a `non-call-expr` maps to `AstCall`.
-
-So there is *some* relation between the grammar and the data-structure its
-parser produces;  but the relation is a *ad-hoc* and complicated.
-
-But lets consider the stricter grammar
+But lets consider the stricter grammar:
 
         varname ::= [a-z]
         call    ::= '(' expr expr ')'
@@ -156,7 +146,7 @@ Now we have a very clear mapping between data types and rules:
         expr    -> AstNode
 
 Better still the stricter grammar, and the mapping are reflected in our code.
-Not in the parser, but in the printer function `unparse`.
+Not in the parser, but in the printer function `unparse`, which is:
 
         void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
         {
@@ -180,10 +170,13 @@ Not in the parser, but in the printer function `unparse`.
 The two `case` clauses correspond to the `call` and `varname` rules, while the
 function as a whole corresponds to the `expr` clause.
 
-### Hypothesis: Data-structures maps closely to strict grammars.
+So set down the following tentative, informal, hypothesis:
 
-For any given data structure we might like serialise, there are strict grammars
-whose rules map closely to the data structure.  Looser grammars can be written
-but they tend to be more complicated because they need various catch-alls that
-don't represent particular data types.
+### Hypothesis: Data-structures map closely to strict grammars.
+
+For any given data structure we might like to serialise, there are strict
+grammars whose rules map closely to type in the data structure.  Looser
+grammars can be written for the same data structure, but they tend to be more
+complicated because they need various catch-alls that don't represent
+particular data types.
 
