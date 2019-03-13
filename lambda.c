@@ -17,7 +17,6 @@ typedef struct AstNodeId {
 
 typedef struct {
         AstNodeId func;
-        AstNodeId arg;
 } AstCall;
 
 typedef struct {
@@ -70,15 +69,27 @@ static AstNodeId ast_root(Ast *ast)
         return (AstNodeId){nnodes - 1};
 }
 
-static AstNode *ast_node_at(Ast *ast, AstNodeId id)
+static AstNodeId ast_node_id_from_ptr(const Ast *ast, const AstNode *p)
+{
+        size_t n = p - ast->nodes;
+        DIE_IF(n >= ast->nnodes, "Can't get ID for out-of bounds node at %ld",
+               n);
+        return (AstNodeId){n};
+}
+
+static const AstNode *ast_node_at(const Ast *ast, AstNodeId id)
 {
         DIE_IF(id.n >= ast->nnodes, "Out-of-bounds node id %ul", id.n);
         return ast->nodes + id.n;
 }
 
-static AstNode ast_node(const Ast *ast, AstNodeId id)
+static const AstNode *ast_call_arg(const Ast *ast, const AstNode *call)
 {
-        return *ast_node_at((Ast *)ast, id);
+        int32_t idx = call - ast->nodes;
+        DIE_IF(call->type != ANT_CALL, "%s called, on non-call node %u",
+               __func__, idx);
+        DIE_IF(idx < 2, "CALL node found at idx %u", idx);
+        return call - 1;
 }
 
 static AstNode *ast_node_alloc(Ast *ast, size_t n)
@@ -231,7 +242,6 @@ static const char *parse_expr(Ast *ast, const char *z0)
                 AstNodeId func = ast_root(ast);
                 z = eat_white(z);
                 const char *z1 = parse_non_call_expr(ast, z);
-                AstNodeId arg = ast_root(ast);
 
                 if (!z1) {
                         return z;
@@ -241,7 +251,6 @@ static const char *parse_expr(Ast *ast, const char *z0)
                 *call = (AstNode){.type = ANT_CALL,
                                   .CALL = {
                                       .func = func,
-                                      .arg = arg,
                                   }};
         }
 }
@@ -271,7 +280,8 @@ static Ast *parse(const char *zname, const char *zsrc)
 
 void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
 {
-        AstNode node = ast_node(ast, root);
+        const AstNode *pnode = ast_node_at(ast, root);
+        AstNode node = *pnode;
         switch ((AstNodeType)node.type) {
         case ANT_FREE:
                 fputc(node.FREE.token + 'a', oot);
@@ -280,7 +290,8 @@ void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
                 fputc('(', oot);
                 unparse(oot, ast, node.CALL.func);
                 fputc(' ', oot);
-                unparse(oot, ast, node.CALL.arg);
+                unparse(oot, ast,
+                        ast_node_id_from_ptr(ast, ast_call_arg(ast, pnode)));
                 fputc(')', oot);
                 return;
         }
