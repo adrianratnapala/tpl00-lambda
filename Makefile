@@ -33,10 +33,11 @@ all: fmt progs
 $B/lambda: \
         $B/lambda.o \
         $B/main.o \
+        $B/parse.o \
         $B/untestable.o
 
 $B/%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 coverage: test_without_coverage
 	$(GCOVR) --fail-under-line 100
@@ -63,8 +64,11 @@ clean:
 dirs:
 	mkdir -p $B
 
-main.o: lambda.h untestable.h
-lambda.o: lambda.h
+$B/lambda.o: lambda.h untestable.h
+$B/main.o: lambda.h untestable.h
+$B/parse.o: lambda.h untestable.h
+$B/untestable.o: untestable.h
+
 
 fmt:
 	$(CLANG_FORMAT) -i *.c *.h
