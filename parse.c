@@ -9,6 +9,12 @@
 #include "lambda.h"
 #include "untestable.h"
 
+typedef struct SyntaxError SyntaxError;
+struct SyntaxError {
+        SyntaxError *prev;
+        char *zmsg;
+};
+
 struct Ast {
         const char *zname;
         const char *zsrc;
@@ -17,12 +23,6 @@ struct Ast {
         uint32_t nnodes_alloced;
         uint32_t nnodes;
         AstNode nodes[];
-};
-
-struct SyntaxError {
-        SyntaxError *prev;
-
-        char *zmsg;
 };
 
 // ------------------------------------------------------------------
