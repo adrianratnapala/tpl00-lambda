@@ -26,8 +26,8 @@ void unparse(FILE *oot, const Ast *ast, const AstNode *root)
         const AstNode *f, *x;
         AstNode node = *root;
         switch ((AstNodeType)node.type) {
-        case ANT_FREE:
-                fputc(node.FREE.token + 'a', oot);
+        case ANT_VAR:
+                fputc(node.VAR.token + 'a', oot);
                 return;
         case ANT_CALL:
                 ast_call_unpack(root, &f, &x);

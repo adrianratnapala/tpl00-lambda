@@ -149,8 +149,8 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
 
                 AstNode *pn = ast_node_alloc(ast, 1);
                 *pn = (AstNode){
-                    .type = ANT_FREE,
-                    .FREE = {.token = token},
+                    .type = ANT_VAR,
+                    .VAR = {.token = token},
                 };
 
                 return zE;

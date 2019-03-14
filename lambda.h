@@ -8,15 +8,15 @@
 // corresponds to a field AstNode.XYZ of type AstXyz.
 typedef enum
 {
-        ANT_FREE = 1,
+        ANT_VAR = 1,
         ANT_CALL,
 } AstNodeType;
 
 // FIX: rename to AstVar
-// AstFree represents a named variable in the AST.
+// AstVar represents a named variable in the AST.
 typedef struct {
         uint32_t token;
-} AstFree;
+} AstVar;
 
 // AstCall represents a call of a function.  This relies on post-fix ordering of
 // Ast nodes:
@@ -35,7 +35,7 @@ typedef struct {
 
         union {
                 AstCall CALL;
-                AstFree FREE;
+                AstVar VAR;
         };
 } AstNode;
 

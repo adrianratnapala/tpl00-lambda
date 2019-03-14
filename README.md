@@ -122,11 +122,11 @@ what about node types in the AST?  Each node is of the form:
                 uint32_t type;
                 union {
                         AstCall CALL;
-                        AstFree FREE;
+                        AstVar VAR;
                 };
         };
 
-So there are three data-types in all, `AstCall` and `AstFree` for the two types
+So there are three data-types in all, `AstCall` and `AstVar` for the two types
 of node, and `AstNode` itself which can be either.  These don't map very
 obviously onto the syntax.
 
@@ -138,7 +138,7 @@ But lets consider the stricter grammar:
 
 Now we have a very clear mapping between data types and rules:
 
-        varname -> AstFree
+        varname -> AstVar
         call    -> AstCall
         expr    -> AstNode
 
@@ -149,8 +149,8 @@ Not in the parser, but in the printer function `unparse`, which is:
         {
                 AstNode node = ast_node(ast, root);
                 switch ((AstNodeType)node.type) {
-                case ANT_FREE:
-                        fputc(node.FREE.token + 'a', oot);
+                case ANT_VAR:
+                        fputc(node.VAR.token + 'a', oot);
                         return;
                 case ANT_CALL:
                         fputc('(', oot);
@@ -196,10 +196,10 @@ Also we have:
 
         typedef struct {
                 uint32_t token;
-        } AstFree;
+        } AstVar;
 
-Which means that free variables are just represented by a number representing
-the varname.  More interestingly we have:
+Which means that variables are just represented by a number representing the
+varname.  More interestingly we have:
 
         typedef struct {
                 uint32_t arg_size;
