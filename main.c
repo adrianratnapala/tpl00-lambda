@@ -92,17 +92,20 @@ int main(int argc, char *const *argv)
         int nerr = read_whole_file(stdin, &buf, &size);
 
         if (nerr < 0) {
-                free(buf);
                 fprintf(stderr, "Error reading STDIN: %s\n", strerror(-nerr));
-                exit(1);
+                goto end;
         }
         assert(buf);
         assert(strlen(buf) == size);
 
         if (config.test_source_read) {
                 printf("%lu %s\n", size, buf);
-                return 0;
+                goto end;
         }
 
-        return interpret(stdout, "STDIN", size, buf) ? 1 : 0;
+        nerr = interpret(stdout, "STDIN", size, buf);
+
+end:
+        free(buf);
+        return nerr ? 1 : 0;
 }

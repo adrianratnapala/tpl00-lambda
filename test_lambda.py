@@ -11,7 +11,7 @@ def use_valgrind():
         return uvg.lower() in ('true', 'yes')
 
 class Config:
-        valgrind_command = ['valgrind', '-q'] if use_valgrind() else []
+        valgrind_command = ['valgrind', '--leak-check=yes', '-q'] if use_valgrind() else []
         command = valgrind_command + ['b/lambda']
         seconds_per_command=0.5
 
