@@ -119,10 +119,7 @@ So grammar rules and parser-internal functions map onto each other closely.  But
 what about node types in the AST?  Each node is of the form:
 
         struct AstNode {
-                uint16_t type;
-                uint16_t pad2_3;
-                uint32_t pad5_8;
-
+                uint32_t type;
                 union {
                         AstCall CALL;
                         AstFree FREE;
@@ -179,4 +176,45 @@ grammars whose rules map closely to type in the data structure.  Looser
 grammars can be written for the same data structure, but they tend to be more
 complicated because they need various catch-alls that don't represent
 particular data types.
+
+### The AST and its post-fixity.
+
+How is the AST actually put together?  The `AstNode`s are stored contiguously
+in memory along with some metadata.
+
+        typedef struct {
+                const char *zname;
+                const char *zsrc;
+                SyntaxError *error;
+                uint32_t zsrc_len;
+                uint32_t nnodes_alloced;
+                uint32_t nnodes;
+                AstNode nodes[];
+        } Ast;
+
+Also we have:
+
+        typedef struct {
+                uint32_t token;
+        } AstFree;
+
+Which means that free variables are just represented by a number representing
+the varname.  More interestingly we have:
+
+        typedef struct {
+                uint32_t arg_size;
+        } AstCall;
+
+What???
+
+We are relying on a guarantee that nodes are stored in post-fix order.  That
+means each sub-tree in the AST is stored contiguously and the root of every
+tree is the last node in it.
+
+Given a pointer to a CALL, we can calculate the pointer to the root of its
+argument g by just subtracting 1.  But the full argument sub-tree has a
+variable size, which we must store.  The root of the called function
+is at
+
+        pointer-to-called-function = pointer-to-CALL - arg_size - 1
 
