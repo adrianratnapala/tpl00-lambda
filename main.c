@@ -103,7 +103,13 @@ int main(int argc, char *const *argv)
                 goto end;
         }
 
-        nerr = interpret(stdout, "STDIN", size, buf);
+        Ast *ast = parse("STDIN", buf);
+        nerr = report_syntax_errors(stderr, ast);
+        if (!nerr) {
+                nerr = interpret(stdout, ast);
+        }
+
+        delete_ast(ast);
 
 end:
         free(buf);

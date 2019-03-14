@@ -50,7 +50,7 @@ typedef struct Ast Ast;
 Ast *parse(const char *zname, const char *zsrc);
 
 // The root node of the Ast.
-const AstNode *ast_root(Ast *ast);
+const AstNode *ast_root(const Ast *ast);
 
 // Discard an Ast (including the stored error messages.)
 void delete_ast(Ast *ast);
@@ -61,7 +61,6 @@ int report_syntax_errors(FILE *oot, Ast *ast);
 // is both counted and NUL terminated, i.e. `src_len == strlen(zsrc)`.  `zname`
 // is a filename (used for error messages and such).  Returns the number of
 // errors found during parsing and/or running.
-extern int interpret(FILE *oot, const char *zname, size_t src_len,
-                     const char *zsrc);
+extern int interpret(FILE *oot, const Ast *ast);
 
 #endif // LAMBDA_2018_03_07_H

@@ -27,7 +27,7 @@ struct Ast {
 
 // ------------------------------------------------------------------
 
-const AstNode *ast_root(Ast *ast)
+const AstNode *ast_root(const Ast *ast)
 {
         uint32_t nnodes = ast->nnodes;
         DIE_IF(!nnodes, "Empty AST has no root");

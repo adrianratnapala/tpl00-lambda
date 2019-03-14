@@ -44,18 +44,10 @@ void unparse(FILE *oot, const Ast *ast, const AstNode *root)
 
 // ------------------------------------------------------------------
 
-int interpret(FILE *oot, const char *zname, size_t src_len, const char *zsrc)
+int interpret(FILE *oot, const Ast *ast)
 {
-        assert(!zsrc[src_len]);
-        assert(strlen(zsrc) == src_len);
-
-        Ast *ast = parse(zname, zsrc);
-        int nerr = report_syntax_errors(stderr, ast);
-        if (!nerr) {
-                unparse(oot, ast, ast_root(ast));
-                fputc('\n', oot);
-        }
+        unparse(oot, ast, ast_root(ast));
+        fputc('\n', oot);
         fflush(oot);
-        delete_ast(ast);
-        return nerr;
+        return 0;
 }
