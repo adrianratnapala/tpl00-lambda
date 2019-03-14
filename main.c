@@ -81,37 +81,44 @@ static int read_whole_file(FILE *fin, char **obuf, size_t *osize)
         return ern;
 }
 
-int main(int argc, char *const *argv)
+static char *read_stdin_or_exit(const LambdaConfig *config)
 {
-        LambdaConfig config = {0};
-        set_injected_faults(secure_getenv("INJECTED_FAULTS"));
-        parse_argv_or_die(argc, argv, &config);
-
         size_t size;
         char *buf;
         int nerr = read_whole_file(stdin, &buf, &size);
 
         if (nerr < 0) {
                 fprintf(stderr, "Error reading STDIN: %s\n", strerror(-nerr));
-                goto end;
+                free(buf);
+                exit(1);
         }
         assert(buf);
         assert(strlen(buf) == size);
 
-        if (config.test_source_read) {
+        if (config->test_source_read) {
                 printf("%lu %s\n", size, buf);
-                goto end;
+                free(buf);
+                exit(0);
         }
 
-        Ast *ast = parse("STDIN", buf);
-        nerr = report_syntax_errors(stderr, ast);
+        return buf;
+}
+
+int main(int argc, char *const *argv)
+{
+        LambdaConfig config = {0};
+        set_injected_faults(secure_getenv("INJECTED_FAULTS"));
+        parse_argv_or_die(argc, argv, &config);
+
+        char *zsrc = read_stdin_or_exit(&config);
+
+        Ast *ast = parse("STDIN", zsrc);
+        int nerr = report_syntax_errors(stderr, ast);
         if (!nerr) {
                 nerr = interpret(stdout, ast);
         }
 
         delete_ast(ast);
-
-end:
-        free(buf);
+        free(zsrc);
         return nerr ? 1 : 0;
 }
