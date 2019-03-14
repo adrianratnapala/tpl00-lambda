@@ -11,10 +11,6 @@
 
 typedef struct AstNode AstNode;
 
-typedef struct AstNodeId {
-        int32_t n;
-} AstNodeId;
-
 typedef struct {
         uint32_t arg_size;
 } AstCall;
@@ -30,18 +26,13 @@ typedef enum
 } AstNodeType;
 
 struct AstNode {
-        uint16_t type;
-        uint16_t pad2_3;
-        uint32_t pad5_8;
+        uint32_t type;
 
         union {
                 AstCall CALL;
                 AstFree FREE;
         };
 };
-
-static_assert(offsetof(AstNode, CALL) == sizeof(void *),
-              "AstNode union is in an unexpected place.");
 
 typedef struct SyntaxError SyntaxError;
 struct SyntaxError {
@@ -62,25 +53,11 @@ typedef struct {
 
 // ------------------------------------------------------------------
 
-static AstNodeId ast_root(Ast *ast)
+static const AstNode *ast_root(Ast *ast)
 {
         uint32_t nnodes = ast->nnodes;
         DIE_IF(!nnodes, "Empty AST has no root");
-        return (AstNodeId){nnodes - 1};
-}
-
-static AstNodeId ast_node_id_from_ptr(const Ast *ast, const AstNode *p)
-{
-        size_t n = p - ast->nodes;
-        DIE_IF(n >= ast->nnodes, "Can't get ID for out-of bounds node at %ld",
-               n);
-        return (AstNodeId){n};
-}
-
-static const AstNode *ast_node_at(const Ast *ast, AstNodeId id)
-{
-        DIE_IF(id.n >= ast->nnodes, "Out-of-bounds node id %ul", id.n);
-        return ast->nodes + id.n;
+        return ast->nodes + nnodes - 1;
 }
 
 static void ast_call_unpack(const Ast *ast, const AstNode *call,
@@ -242,14 +219,15 @@ static const char *parse_expr(Ast *ast, const char *z0)
         }
 
         for (;;) {
-                AstNodeId func = ast_root(ast);
+                const AstNode *func = ast_root(ast);
                 z = eat_white(z);
                 const char *z1 = parse_non_call_expr(ast, z);
-                uint32_t arg_size = ast_root(ast).n - func.n;
-
+                size_t arg_size = ast_root(ast) - func;
                 if (!z1) {
                         return z;
                 }
+                DIE_IF(arg_size > INT32_MAX,
+                       "Huge arg parsed %lu nodes, why no ENOMEM?", arg_size);
                 z = z1;
                 AstNode *call = ast_node_alloc(ast, 1);
                 *call =
@@ -280,21 +258,20 @@ static Ast *parse(const char *zname, const char *zsrc)
 
 // ------------------------------------------------------------------
 
-void unparse(FILE *oot, const Ast *ast, const AstNodeId root)
+void unparse(FILE *oot, const Ast *ast, const AstNode *root)
 {
-        const AstNode *pnode = ast_node_at(ast, root);
         const AstNode *f, *x;
-        AstNode node = *pnode;
+        AstNode node = *root;
         switch ((AstNodeType)node.type) {
         case ANT_FREE:
                 fputc(node.FREE.token + 'a', oot);
                 return;
         case ANT_CALL:
-                ast_call_unpack(ast, pnode, &f, &x);
+                ast_call_unpack(ast, root, &f, &x);
                 fputc('(', oot);
-                unparse(oot, ast, ast_node_id_from_ptr(ast, f));
+                unparse(oot, ast, f);
                 fputc(' ', oot);
-                unparse(oot, ast, ast_node_id_from_ptr(ast, x));
+                unparse(oot, ast, x);
                 fputc(')', oot);
                 return;
         }
