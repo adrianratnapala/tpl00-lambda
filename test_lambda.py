@@ -150,3 +150,11 @@ def test_parse_error_multi_byte_varname():
 def test_parse_error_expected_expr():
         assert X.err(FILENAME(), 0, "Expected expr") == run_lambda('').parse_err()
 
+def test_explicit_act_unparse():
+        assert X.ok('x') == run_lambda('x', args={"unparse":True})
+
+def test_bad_print_and_test_source_read():
+        assert X.err() == run_lambda('x', args={
+                "test_source_read":True,
+                "unparse":True,
+        }).match_err("--test-source-read means.*actions:")

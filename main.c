@@ -12,19 +12,24 @@
 #include "untestable.h"
 
 typedef struct {
-        // Just test code for reading sources.  Read the input and write it,
-        // and it's length to stdout.
+        // Just test code for reading sources.  Read the input and
+        // write it, and it's length to stdout.
         bool test_source_read;
+        struct {
+                bool unparse;
+        } actions;
 } LambdaConfig;
 
-static void parse_argv_or_die(int argc, char *const *argv, LambdaConfig *config)
+static LambdaConfig parse_argv_or_die(int argc, char *const *argv)
 {
+        LambdaConfig conf = {0};
         enum Opt
         {
                 OPT_DONE = -1,
                 OPT_BAD = '?',
                 // OPT_DEFAULT = ':',
                 OPT_TEST_SOURCE_READ = 1000,
+                OPT_ACT_UNPARSE,
         };
         enum
         {
@@ -33,24 +38,48 @@ static void parse_argv_or_die(int argc, char *const *argv, LambdaConfig *config)
         };
         static struct option longopts[] = {
             {"test-source-read", HAS_NO_ARG, NULL, OPT_TEST_SOURCE_READ},
+            {"unparse", HAS_NO_ARG, NULL, OPT_ACT_UNPARSE},
             {0},
         };
 
+        unsigned nacts = 0;
         for (;;) {
                 enum Opt c = getopt_long(argc, argv, "", longopts, NULL);
                 switch (c) {
                 case OPT_TEST_SOURCE_READ:
-                        config->test_source_read = true;
+                        conf.test_source_read = true;
                         continue;
+                case OPT_ACT_UNPARSE:
+                        conf.actions.unparse = true;
+                        nacts++;
                 case OPT_DONE:
-                        return;
+                        goto end;
                 case OPT_BAD: /* deliberate fallthrough */;
                 default:
                         // Should have already printed more specific message.
                         fprintf(stderr, "Error parsing command line\n");
+                        fflush(stderr);
                         exit(1);
                 }
         }
+end:
+
+        if (nacts && conf.test_source_read) {
+                fprintf(stderr, "--test-source-read means read the then exit, "
+                                "it cannot be used along with actions:\n");
+                if (conf.actions.unparse) {
+                        fprintf(stderr, "    --unparse\n");
+                }
+                fflush(stderr);
+                exit(1);
+        }
+
+        if (!nacts) {
+                nacts++;
+                conf.actions.unparse = true;
+        }
+
+        return conf;
 }
 
 static int read_whole_file(FILE *fin, char **obuf, size_t *osize)
@@ -106,9 +135,8 @@ static char *read_stdin_or_exit(const LambdaConfig *config)
 
 int main(int argc, char *const *argv)
 {
-        LambdaConfig config = {0};
         set_injected_faults(secure_getenv("INJECTED_FAULTS"));
-        parse_argv_or_die(argc, argv, &config);
+        LambdaConfig config = parse_argv_or_die(argc, argv);
 
         char *zsrc = read_stdin_or_exit(&config);
 
