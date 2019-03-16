@@ -133,6 +133,15 @@ static char *read_stdin_or_exit(const LambdaConfig *config)
         return buf;
 }
 
+static int do_actions(const LambdaConfig *conf, const Ast *ast)
+{
+        int nerr = 0;
+        if (conf->actions.unparse) {
+                nerr += act_unparse(stdout, ast);
+        }
+        return 0;
+}
+
 int main(int argc, char *const *argv)
 {
         set_injected_faults(secure_getenv("INJECTED_FAULTS"));
@@ -143,7 +152,7 @@ int main(int argc, char *const *argv)
         Ast *ast = parse("STDIN", zsrc);
         int nerr = report_syntax_errors(stderr, ast);
         if (!nerr) {
-                nerr = interpret(stdout, ast);
+                nerr = do_actions(&config, ast);
         }
 
         delete_ast(ast);

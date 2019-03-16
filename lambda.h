@@ -57,10 +57,10 @@ void delete_ast(Ast *ast);
 
 int report_syntax_errors(FILE *oot, Ast *ast);
 
-// Execute the lambda-program at zsrc, writing the result to `oot`.  The source
+// Print the lambda-program at zsrc, writing the result to `oot`.  The source
 // is both counted and NUL terminated, i.e. `src_len == strlen(zsrc)`.  `zname`
 // is a filename (used for error messages and such).  Returns the number of
-// errors found during parsing and/or running.
-extern int interpret(FILE *oot, const Ast *ast);
+// errors found.
+extern int act_unparse(FILE *oot, const Ast *ast);
 
 #endif // LAMBDA_2018_03_07_H

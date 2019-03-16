@@ -21,7 +21,7 @@ static void ast_call_unpack(const AstNode *call, const AstNode **f,
         *f = arg - call->CALL.arg_size;
 }
 
-void unparse(FILE *oot, const Ast *ast, const AstNode *root)
+static void unparse(FILE *oot, const Ast *ast, const AstNode *root)
 {
         const AstNode *f, *x;
         AstNode node = *root;
@@ -44,7 +44,7 @@ void unparse(FILE *oot, const Ast *ast, const AstNode *root)
 
 // ------------------------------------------------------------------
 
-int interpret(FILE *oot, const Ast *ast)
+int act_unparse(FILE *oot, const Ast *ast)
 {
         unparse(oot, ast, ast_root(ast));
         fputc('\n', oot);
