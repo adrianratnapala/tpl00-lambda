@@ -10,17 +10,6 @@
 #include "untestable.h"
 
 // ------------------------------------------------------------------
-
-static void ast_call_unpack(const AstNode *call, const AstNode **f,
-                            const AstNode **x)
-{
-        DIE_IF(call->type != ANT_CALL, "%s called, on non-call node.",
-               __func__);
-        const AstNode *arg = call - 1;
-        *x = arg;
-        *f = arg - call->CALL.arg_size;
-}
-
 static void unparse(FILE *oot, const Ast *ast, const AstNode *root)
 {
         const AstNode *f, *x;

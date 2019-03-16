@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "untestable.h"
+
 // Tag-enum for the type of nodes in abstract syntax tree (AST).  ANT_XYZ
 // corresponds to a field AstNode.XYZ of type AstXyz.
 typedef enum
@@ -41,6 +43,19 @@ typedef struct {
 
 // Ast.  An opaque pointer to the result of parse().
 typedef struct Ast Ast;
+
+// Decodes an CALL AstNode into a function and argument pointer.
+static inline void ast_call_unpack(const AstNode *call, const AstNode **f,
+                                   const AstNode **x)
+{
+        DIE_IF(call->type != ANT_CALL, "%s called, on non-call node.",
+               __func__);
+        const AstNode *arg = call - 1;
+        *x = arg;
+        *f = arg - call->CALL.arg_size;
+}
+
+// --------------------------------------------------------------------------------------
 
 // Parse nul-terminated source `zsrc` into an AST.  `zname` is the file-name
 // for error messages and such.  malloc() failure while trying to allocate the
