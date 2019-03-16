@@ -34,6 +34,7 @@ $B/lambda: \
         $B/lambda.o \
         $B/main.o \
         $B/parse.o \
+        $B/type.o \
         $B/untestable.o
 
 $B/%.o: %.c
@@ -67,6 +68,7 @@ dirs:
 $B/lambda.o: lambda.h untestable.h
 $B/main.o: lambda.h untestable.h
 $B/parse.o: lambda.h untestable.h
+$B/type.o: lambda.h untestable.h
 $B/untestable.o: untestable.h
 
 

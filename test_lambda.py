@@ -158,3 +158,10 @@ def test_bad_print_and_test_source_read():
                 "test_source_read":True,
                 "unparse":True,
         }).match_err("--test-source-read means.*actions:")
+
+ACT_TYPE={
+        "type": True
+}
+def test_type_trivial_x():
+        assert X.ok('X') == run_lambda('x', args=ACT_TYPE)
+

@@ -17,6 +17,7 @@ typedef struct {
         bool test_source_read;
         struct {
                 bool unparse;
+                bool type;
         } actions;
 } LambdaConfig;
 
@@ -29,6 +30,7 @@ static LambdaConfig parse_argv_or_die(int argc, char *const *argv)
                 OPT_BAD = '?',
                 // OPT_DEFAULT = ':',
                 OPT_TEST_SOURCE_READ = 1000,
+                OPT_ACT_TYPE,
                 OPT_ACT_UNPARSE,
         };
         enum
@@ -39,6 +41,7 @@ static LambdaConfig parse_argv_or_die(int argc, char *const *argv)
         static struct option longopts[] = {
             {"test-source-read", HAS_NO_ARG, NULL, OPT_TEST_SOURCE_READ},
             {"unparse", HAS_NO_ARG, NULL, OPT_ACT_UNPARSE},
+            {"type", HAS_NO_ARG, NULL, OPT_ACT_TYPE},
             {0},
         };
 
@@ -49,6 +52,10 @@ static LambdaConfig parse_argv_or_die(int argc, char *const *argv)
                 case OPT_TEST_SOURCE_READ:
                         conf.test_source_read = true;
                         continue;
+                case OPT_ACT_TYPE:
+                        conf.actions.type = true;
+                        nacts++;
+                        break;
                 case OPT_ACT_UNPARSE:
                         conf.actions.unparse = true;
                         nacts++;
@@ -139,6 +146,9 @@ static int do_actions(const LambdaConfig *conf, const Ast *ast)
         int nerr = 0;
         if (conf->actions.unparse) {
                 nerr += act_unparse(stdout, ast);
+        }
+        if (conf->actions.type) {
+                nerr += act_type(stdout, ast);
         }
         return 0;
 }
