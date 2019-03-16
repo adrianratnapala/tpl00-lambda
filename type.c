@@ -64,17 +64,6 @@ static void unparse_type(FILE *oot, const TypeTree *ttree, const Type *t)
 {
         Type ty = *t->master_t;
 
-        if (ty.arg_t) {
-                // it has an arg_t therefore it is a function
-                fputc('(', oot);
-                unparse_type(oot, ttree, ty.arg_t);
-                fputc(' ', oot);
-                unparse_type(oot, ttree, ty.ret_t);
-                fputc(')', oot);
-                return;
-        }
-
-        // It's a typevar, but to name it correctly we must look at the AST.
         size_t idx = t->master_t - ttree->types;
         const AstNode *expr = ttree->postfix + idx;
         int k = 0;
@@ -87,6 +76,16 @@ static void unparse_type(FILE *oot, const TypeTree *ttree, const Type *t)
         fputc(expr->VAR.token + 'A', oot);
         while (k--) {
                 fputc('r', oot);
+        }
+
+        if (ty.arg_t) {
+                // it has an arg_t therefore it is a function
+                fputs("=(", oot);
+                unparse_type(oot, ttree, ty.arg_t);
+                fputc(' ', oot);
+                unparse_type(oot, ttree, ty.ret_t);
+                fputc(')', oot);
+                return;
         }
 }
 

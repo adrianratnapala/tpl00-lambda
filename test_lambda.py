@@ -184,7 +184,7 @@ def test_type_trivial_x(xname):
 
 def test_type_call():
         assert run_type("(x y)") == X.lines(
-                "(Y Xr)",
+                "X=(Y Xr)",
                 "Y",
                 "Xr",
         )
