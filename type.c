@@ -67,9 +67,9 @@ static void unparse_type(FILE *oot, const TypeTree *ttree, const Type *t)
         if (ty.arg_t) {
                 // it has an arg_t therefore it is a function
                 fputc('(', oot);
-                unparse_type(oot, ttree, ty.ret_t);
-                fputc(' ', oot);
                 unparse_type(oot, ttree, ty.arg_t);
+                fputc(' ', oot);
+                unparse_type(oot, ttree, ty.ret_t);
                 fputc(')', oot);
                 return;
         }
