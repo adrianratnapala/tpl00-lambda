@@ -64,8 +64,8 @@ static inline void ast_call_unpack(const AstNode *call, const AstNode **f,
 // reported with report_syntax_errors.
 Ast *parse(const char *zname, const char *zsrc);
 
-// The root node of the Ast.
-const AstNode *ast_root(const Ast *ast);
+// Return all the nodes as an array in post-fix order.  Ast retains ownership.
+const AstNode *ast_postfix(const Ast *ast, uint32_t *size);
 
 // Discard an Ast (including the stored error messages.)
 void delete_ast(Ast *ast);

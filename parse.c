@@ -27,7 +27,15 @@ struct Ast {
 
 // ------------------------------------------------------------------
 
-const AstNode *ast_root(const Ast *ast)
+const AstNode *ast_postfix(const Ast *ast, uint32_t *size_ret)
+{
+        uint32_t nnodes = ast->nnodes;
+        DIE_IF(!nnodes, "An empty AST is postfix.");
+        *size_ret = nnodes;
+        return ast->nodes;
+}
+
+static const AstNode *ast_root(const Ast *ast)
 {
         uint32_t nnodes = ast->nnodes;
         DIE_IF(!nnodes, "Empty AST has no root");

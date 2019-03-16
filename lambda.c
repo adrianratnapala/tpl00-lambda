@@ -35,7 +35,10 @@ static void unparse(FILE *oot, const Ast *ast, const AstNode *root)
 
 int act_unparse(FILE *oot, const Ast *ast)
 {
-        unparse(oot, ast, ast_root(ast));
+        uint32_t size;
+        const AstNode *ast0 = ast_postfix(ast, &size);
+
+        unparse(oot, ast, ast0 + size - 1);
         fputc('\n', oot);
         fflush(oot);
         return 0;
