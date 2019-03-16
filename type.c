@@ -9,9 +9,14 @@
 #include "lambda.h"
 #include "untestable.h"
 
-
 int act_type(FILE *oot, const Ast *ast)
 {
-        fprintf(oot, "X\n");
+        uint32_t size;
+        const AstNode *postfix = ast_postfix(ast, &size);
+        const AstNode *root = postfix + size - 1;
+
+        DIE_IF(root->type != ANT_VAR, "Sorry, can only type VARs :(");
+
+        fprintf(oot, "%c\n", root->VAR.token + 'A');
         return 0;
 }

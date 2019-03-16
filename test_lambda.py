@@ -2,6 +2,7 @@
 
 import re
 import os
+import pytest
 import subprocess
 import sys
 from collections import namedtuple
@@ -162,6 +163,12 @@ def test_bad_print_and_test_source_read():
 ACT_TYPE={
         "type": True
 }
-def test_type_trivial_x():
-        assert X.ok('X') == run_lambda('x', args=ACT_TYPE)
+
+@pytest.fixture(params="xyz")
+def xname(request):
+        return request.param
+
+def test_type_trivial_x(xname):
+        xtype = xname.upper()
+        assert X.ok(xtype) == run_lambda(xname, args=ACT_TYPE)
 
