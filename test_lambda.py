@@ -56,6 +56,9 @@ class X(Result):
         @classmethod
         def ok(cls, xout): return X(out='%s\n' % xout)
 
+        @classmethod
+        def lines(cls, *args): return X(out=list(args))
+
 
 def args_from(arg_dict):
         args = []
@@ -160,15 +163,20 @@ def test_bad_print_and_test_source_read():
                 "unparse":True,
         }).match_err("--test-source-read means.*actions:")
 
-ACT_TYPE={
-        "type": True
-}
-
 @pytest.fixture(params="xyz")
 def xname(request):
         return request.param
 
+def run_type(src):
+        out, err = run_lambda(src, args={
+                "type": True,
+        })
+        outl = [line.strip() for line in out.strip().split('\n')]
+        return outl, err
+
 def test_type_trivial_x(xname):
         xtype = xname.upper()
-        assert X.ok(xtype) == run_lambda(xname, args=ACT_TYPE)
+        assert run_type(xname) == X.lines(
+                xtype
+        )
 

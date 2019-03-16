@@ -78,7 +78,7 @@ int report_syntax_errors(FILE *oot, Ast *ast);
 // errors found.
 extern int act_unparse(FILE *oot, const Ast *ast);
 
-// Infer types for all expressions in the Ast, and print the type of the root.
+// Infer types for all expressions in the Ast, line-by-line, postfix.
 extern int act_type(FILE *oot, const Ast *ast);
 
 #endif // LAMBDA_2018_03_07_H
