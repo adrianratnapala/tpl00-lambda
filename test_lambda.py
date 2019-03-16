@@ -171,6 +171,8 @@ def run_type(src):
         out, err = run_lambda(src, args={
                 "type": True,
         })
+        if out is None:
+                return out, err
         outl = [line.strip() for line in out.strip().split('\n')]
         return outl, err
 
@@ -178,5 +180,12 @@ def test_type_trivial_x(xname):
         xtype = xname.upper()
         assert run_type(xname) == X.lines(
                 xtype
+        )
+
+def test_type_call():
+        assert run_type("(x y)") == X.lines(
+                "(Xr Y)",
+                "Y",
+                "Xr",
         )
 

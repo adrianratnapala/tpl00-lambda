@@ -22,6 +22,27 @@ typedef struct {
         Type types[];
 } TypeTree;
 
+static void solve_types(TypeTree *ttree)
+{
+        const AstNode *exprs = ttree->postfix;
+        Type *types = ttree->types;
+        uint32_t size = ttree->size;
+
+        const AstNode *f, *x;
+        for (int k = 0; k < size; k++) {
+                // FIX: make ast_call_unpack return a boolean for this sort of
+                // test.
+                if (exprs[k].type != ANT_CALL)
+                        continue;
+                // FIX: here, it would be better if ast_call_unpack used ids.
+                ast_call_unpack(exprs + k, &f, &x);
+                uint32_t fidx = f - exprs;
+                uint32_t xidx = x - exprs;
+                types[fidx].arg_t = types[xidx].master_t;
+                types[fidx].ret_t = types[k].master_t;
+        }
+}
+
 static TypeTree *build_type_tree(const Ast *ast)
 {
         uint32_t size;
@@ -34,6 +55,7 @@ static TypeTree *build_type_tree(const Ast *ast)
                 *t = (Type){.master_t = t};
         }
 
+        solve_types(tree);
         return tree;
 }
 
@@ -70,17 +92,6 @@ static void unparse_type(FILE *oot, const TypeTree *ttree, const Type *t)
 
 int act_type(FILE *oot, const Ast *ast)
 {
-        /*
-        uint32_t size;
-        const AstNode *postfix = ast_postfix(ast, &size);
-
-        for (size_t k = 0; k < size; k++) {
-                const AstNode *expr = postfix + size - 1;
-                DIE_IF(expr->type != ANT_VAR, "Sorry, can only type VARs :(");
-                fprintf(oot, "%c\n", expr->VAR.token + 'A');
-        }
-        */
-
         TypeTree *ttree = build_type_tree(ast);
         for (size_t k = 0; k < ttree->size; k++) {
                 unparse_type(oot, ttree, ttree->types + k);
@@ -88,8 +99,6 @@ int act_type(FILE *oot, const Ast *ast)
         }
 
         free(ttree);
-
         fflush(oot);
-
         return 0;
 }
