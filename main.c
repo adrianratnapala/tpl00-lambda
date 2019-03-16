@@ -52,6 +52,7 @@ static LambdaConfig parse_argv_or_die(int argc, char *const *argv)
                 case OPT_ACT_UNPARSE:
                         conf.actions.unparse = true;
                         nacts++;
+                        break;
                 case OPT_DONE:
                         goto end;
                 case OPT_BAD: /* deliberate fallthrough */;
