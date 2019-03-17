@@ -189,3 +189,10 @@ def test_type_call():
                 "Xr",
         )
 
+def test_type_call():
+        assert run_type("(x x)") == X.lines(
+                "X=(X Xr)",
+                "X=(X Xr)",
+                "Xr",
+        )
+

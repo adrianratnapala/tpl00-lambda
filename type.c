@@ -9,6 +9,8 @@
 #include "lambda.h"
 #include "untestable.h"
 
+#define MAX_TOKS 26
+
 typedef struct Type Type;
 struct Type {
         Type *master_t;
@@ -19,13 +21,14 @@ typedef struct {
         const AstNode *postfix;
         uint32_t size;
         uint32_t pad;
+        Type *bindings[MAX_TOKS];
         Type types[];
 } TypeTree;
 
 static Type *masterise(Type *t)
 {
         Type *m = t->master_t;
-        if(m == t) {
+        if (m == t) {
                 return t;
         }
         return t->master_t = masterise(m);
@@ -37,7 +40,7 @@ static void coerce_to_fun_type(Type *fun_t, Type *arg_t, Type *ret_t)
         arg_t = masterise(arg_t);
         ret_t = masterise(ret_t);
         DIE_IF(fun_t->arg_t,
-                "Unify() not implemented.  Cannot re-coerce function types.");
+               "Unify() not implemented.  Cannot re-coerce function types.");
         fun_t->arg_t = arg_t;
         fun_t->ret_t = ret_t;
 }
@@ -52,8 +55,18 @@ static void solve_types(TypeTree *ttree)
         for (int k = 0; k < size; k++) {
                 // FIX: make ast_call_unpack return a boolean for this sort of
                 // test.
-                if (exprs[k].type != ANT_CALL)
+                if (exprs[k].type != ANT_CALL) {
+                        DIE_IF(exprs[k].type != ANT_VAR,
+                               "Not a VAR, not a CALL?");
+                        unsigned tok = exprs[k].VAR.token;
+                        DIE_IF(tok > MAX_TOKS, "Overbig token %u", tok);
+                        if (ttree->bindings[tok]) {
+                                types[k] = *ttree->bindings[tok];
+                        } else {
+                                ttree->bindings[tok] = types + k;
+                        }
                         continue;
+                }
                 // FIX: here, it would be better if ast_call_unpack used ids.
                 ast_call_unpack(exprs + k, &f, &x);
                 uint32_t fidx = f - exprs;
@@ -70,6 +83,7 @@ static TypeTree *build_type_tree(const Ast *ast)
             realloc_or_die(HERE, 0, sizeof(TypeTree) + sizeof(Type) * size);
         *tree = (TypeTree){.postfix = postfix, .size = size};
         for (int k = 0; k < size; k++) {
+                // FIX: merge this loop with the one in solve_tree
                 Type *t = tree->types + k;
                 *t = (Type){.master_t = t};
         }
@@ -79,7 +93,8 @@ static TypeTree *build_type_tree(const Ast *ast)
 }
 
 // ------------------------------------------------------------------
-static void unparse_type(FILE *oot, const TypeTree *ttree, const Type *t)
+static void unparse_type(FILE *oot, const TypeTree *ttree, int depth,
+                         const Type *t)
 {
         Type ty = *t->master_t;
 
@@ -97,12 +112,12 @@ static void unparse_type(FILE *oot, const TypeTree *ttree, const Type *t)
                 fputc('r', oot);
         }
 
-        if (ty.arg_t) {
+        if (ty.arg_t && !depth) {
                 // it has an arg_t therefore it is a function
                 fputs("=(", oot);
-                unparse_type(oot, ttree, ty.arg_t);
+                unparse_type(oot, ttree, depth + 1, ty.arg_t);
                 fputc(' ', oot);
-                unparse_type(oot, ttree, ty.ret_t);
+                unparse_type(oot, ttree, depth + 1, ty.ret_t);
                 fputc(')', oot);
                 return;
         }
@@ -112,7 +127,7 @@ int act_type(FILE *oot, const Ast *ast)
 {
         TypeTree *ttree = build_type_tree(ast);
         for (size_t k = 0; k < ttree->size; k++) {
-                unparse_type(oot, ttree, ttree->types + k);
+                unparse_type(oot, ttree, 0, ttree->types + k);
                 fputc('\n', oot);
         }
 
