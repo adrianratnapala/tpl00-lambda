@@ -22,6 +22,26 @@ typedef struct {
         Type types[];
 } TypeTree;
 
+static Type *masterise(Type *t)
+{
+        Type *m = t->master_t;
+        if(m == t) {
+                return t;
+        }
+        return t->master_t = masterise(m);
+}
+
+static void coerce_to_fun_type(Type *fun_t, Type *arg_t, Type *ret_t)
+{
+        fun_t = masterise(fun_t);
+        arg_t = masterise(arg_t);
+        ret_t = masterise(ret_t);
+        DIE_IF(fun_t->arg_t,
+                "Unify() not implemented.  Cannot re-coerce function types.");
+        fun_t->arg_t = arg_t;
+        fun_t->ret_t = ret_t;
+}
+
 static void solve_types(TypeTree *ttree)
 {
         const AstNode *exprs = ttree->postfix;
@@ -38,8 +58,7 @@ static void solve_types(TypeTree *ttree)
                 ast_call_unpack(exprs + k, &f, &x);
                 uint32_t fidx = f - exprs;
                 uint32_t xidx = x - exprs;
-                types[fidx].arg_t = types[xidx].master_t;
-                types[fidx].ret_t = types[k].master_t;
+                coerce_to_fun_type(types + fidx, types + xidx, types + k);
         }
 }
 
