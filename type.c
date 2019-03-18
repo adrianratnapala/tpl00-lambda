@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include <assert.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -10,6 +11,7 @@
 #include "untestable.h"
 
 #define MAX_TOKS 26
+#define MAX_DEPTH 16
 
 typedef struct Type Type;
 struct Type {
@@ -93,13 +95,43 @@ static TypeTree *build_type_tree(const Ast *ast)
 }
 
 // ------------------------------------------------------------------
-static void unparse_type(FILE *oot, const TypeTree *ttree, int depth,
-                         const Type *t)
-{
-        Type ty = *t->master_t;
 
-        size_t idx = t->master_t - ttree->types;
-        const AstNode *expr = ttree->postfix + idx;
+typedef struct {
+        FILE *oot;
+        const AstNode *exprs; // FIX: pick a name, exprs or postfix
+        Type *types; // FIX: make this const, let one-hop master be the rule.
+        uint32_t depth;
+        uint32_t ntypes;
+        Type *stack[MAX_DEPTH];
+} Unparser;
+
+static bool unparse_push(Unparser *unp, Type *type)
+{
+        assert(type == type->master_t); // FIX: the names
+        uint32_t depth = unp->depth, k = depth;
+        while (k--)
+                if (unp->stack[k] == type)
+                        return false;
+        unp->stack[depth] = type;
+        unp->depth = depth + 1;
+        return true;
+}
+
+static void unparse_pop(Unparser *unp)
+{
+        int depth = (int)unp->depth - 1;
+        assert(depth >= 0);
+        unp->depth = depth;
+}
+
+static void unparse_type_(Unparser *unp, Type *t)
+{
+        t = masterise(t);
+
+        FILE *oot = unp->oot;
+        int32_t idx = t - unp->types;
+
+        const AstNode *expr = unp->exprs + idx;
         int k = 0;
         while (expr->type == ANT_CALL) {
                 k++;
@@ -112,22 +144,42 @@ static void unparse_type(FILE *oot, const TypeTree *ttree, int depth,
                 fputc('r', oot);
         }
 
-        if (ty.arg_t && !depth) {
-                // it has an arg_t therefore it is a function
-                fputs("=(", oot);
-                unparse_type(oot, ttree, depth + 1, ty.arg_t);
-                fputc(' ', oot);
-                unparse_type(oot, ttree, depth + 1, ty.ret_t);
-                fputc(')', oot);
+        Type ty = *t->master_t;
+        if (!ty.arg_t) {
+                // if it's not a function there is no structure to expand.
                 return;
         }
+
+        if (!unparse_push(unp, t)) {
+                // Push failure means we have found recursion.
+                return;
+        }
+
+        fputs("=(", oot);
+        unparse_type_(unp, ty.arg_t);
+        fputc(' ', oot);
+        unparse_type_(unp, ty.ret_t);
+        fputc(')', oot);
+        unparse_pop(unp);
+}
+
+// FIX: make all the args const.
+static void unparse_type(FILE *oot, TypeTree *tree, Type *t)
+{
+        Unparser unp = {
+            .oot = oot,
+            .exprs = tree->postfix, // FIX: pick a name, exprs or postfix.
+            .types = tree->types,
+        };
+
+        unparse_type_(&unp, t);
 }
 
 int act_type(FILE *oot, const Ast *ast)
 {
         TypeTree *ttree = build_type_tree(ast);
         for (size_t k = 0; k < ttree->size; k++) {
-                unparse_type(oot, ttree, 0, ttree->types + k);
+                unparse_type(oot, ttree, ttree->types + k);
                 fputc('\n', oot);
         }
 

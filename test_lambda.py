@@ -196,3 +196,20 @@ def test_type_call():
                 "Xr",
         )
 
+def test_deepish_type():
+        assert run_type("((a b) c)") == X.lines(
+                "A=(B Ar=(C Arr))",
+                "B",
+                "Ar=(C Arr)",
+                "C",
+                "Arr",
+        )
+
+def test_deepish_recursive_type():
+        assert run_type("((a b) a)") == X.lines(
+                "A=(B Ar=(A Arr))",
+                "B",
+                "Ar=(A=(B Ar) Arr)",
+                "A=(B Ar=(A Arr))",
+                "Arr",
+        )
