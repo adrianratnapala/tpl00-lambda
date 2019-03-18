@@ -218,3 +218,44 @@ is at
 
         pointer-to-called-function = pointer-to-CALL - arg_size - 1
 
+## Typing
+
+FIX: In the code use `first` and `prior` instead of `master`.
+
+Even though we don't even do any computation yet, it's possible to define a
+meaningful and type system.  Or language only has variables, but if one of them
+is used as a function, then we know it is a function, and so-on.  With the
+`--type` argument, `lambda` will infer print out such types.  For example:
+
+        >>$ b/lambda --type
+        >>> x y
+        X=(Y Xr)   # x is a function with arg type Y, returning Xr.
+        Y          # y has type Y.
+        Xr         # functions of type X return values of type Xr.
+
+
+What we see here is that all types have names, derived from the first value
+found of that type:
+
+* If a variable, `x` its type is just `X`.
+* If the return value of function of type `F`, is `Fr`.
+
+Function types have more structure, their full serialisation is:
+
+        FuncName=(ArgType RetType)
+
+Where each of `ArgType` and `RetType` will also have its own `=(...)`
+expansion, unless
+
+* No value of that type was ever called as a function (i.e. it's a variable type).
+* It is a recursive invocation of the overall type.
+
+Thus:
+
+        >>$ b/lambda --type
+        >>> x x
+        X=(X Xr)   # x is a function with arg type X, returning Xr.
+        X=(X Xr)   # The arg x, has the same type
+        Xr         # functions of type X return values of type Xr.
+
+

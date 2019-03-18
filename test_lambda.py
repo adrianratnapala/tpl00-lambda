@@ -213,3 +213,16 @@ def test_deepish_recursive_type():
                 "A=(B Ar=(A Arr))",
                 "Arr",
         )
+
+def test_deeper_recursive_type():
+        assert run_type("((((a b) c) d) a)") == X.lines(
+                "A=(B Ar=(C Arr=(D Arrr=(A Arrrr))))",
+                "B",
+                "Ar=(C Arr=(D Arrr=(A=(B Ar) Arrrr)))",
+                "C",
+                "Arr=(D Arrr=(A=(B Ar=(C Arr)) Arrrr))",
+                "D",
+                "Arrr=(A=(B Ar=(C Arr=(D Arrr))) Arrrr)",
+                "A=(B Ar=(C Arr=(D Arrr=(A Arrrr))))",
+                "Arrrr"
+        )
