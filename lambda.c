@@ -10,25 +10,24 @@
 #include "untestable.h"
 
 // ------------------------------------------------------------------
-static void unparse(FILE *oot, const Ast *ast, const AstNode *root)
+static void unparse(FILE *oot, const AstNode *nodes, uint32_t idx)
 {
-        const AstNode *f, *x;
-        AstNode node = *root;
-        switch ((AstNodeType)node.type) {
+        uint32_t val;
+        AstNodeType node_t = ast_unpack(nodes, idx, &val);
+        switch (node_t) {
         case ANT_VAR:
-                fputc(node.VAR.token + 'a', oot);
+                fputc(val + 'a', oot);
                 return;
         case ANT_CALL:
-                ast_call_unpack(root, &f, &x);
                 fputc('(', oot);
-                unparse(oot, ast, f);
+                unparse(oot, nodes, val);
                 fputc(' ', oot);
-                unparse(oot, ast, x);
+                unparse(oot, nodes, ast_arg_idx(nodes, idx));
                 fputc(')', oot);
                 return;
         }
-        DIE_LCOV_EXCL_LINE("unparsing found ast node with invalid type id %u",
-                           node.type);
+        DIE_LCOV_EXCL_LINE("Unparsing found Ast node %u with bad type id %u",
+                           idx, node_t);
 }
 
 // ------------------------------------------------------------------
@@ -38,7 +37,7 @@ int act_unparse(FILE *oot, const Ast *ast)
         uint32_t size;
         const AstNode *ast0 = ast_postfix(ast, &size);
 
-        unparse(oot, ast, ast0 + size - 1);
+        unparse(oot, ast0, size - 1);
         fputc('\n', oot);
         fflush(oot);
         return 0;

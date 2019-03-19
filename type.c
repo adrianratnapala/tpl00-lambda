@@ -53,28 +53,23 @@ static void solve_types(TypeTree *ttree)
         Type *types = ttree->types;
         uint32_t size = ttree->size;
 
-        const AstNode *f, *x;
-        for (int k = 0; k < size; k++) {
-                // FIX: make ast_call_unpack return a boolean for this sort of
-                // test.
-                if (exprs[k].type != ANT_CALL) {
-                        DIE_IF(exprs[k].type != ANT_VAR,
-                               "Not a VAR, not a CALL?");
-                        unsigned tok = exprs[k].VAR.token;
-                        DIE_IF(tok > MAX_TOKS, "Overbig token %u", tok);
-                        if (ttree->bindings[tok]) {
-                                types[k] = *ttree->bindings[tok];
+        uint32_t val;
+        for (int k = 0; k < size; k++)
+                switch (ast_unpack(exprs, k, &val)) {
+                case ANT_VAR:
+                        DIE_IF(val > MAX_TOKS, "Overbig token %u", val);
+                        if (ttree->bindings[val]) {
+                                types[k] = *ttree->bindings[val];
                         } else {
-                                ttree->bindings[tok] = types + k;
+                                ttree->bindings[val] = types + k;
                         }
                         continue;
+                case ANT_CALL:
+                        coerce_to_fun_type(types + val,
+                                           types + ast_arg_idx(exprs, k),
+                                           types + k);
+                        continue;
                 }
-                // FIX: here, it would be better if ast_call_unpack used ids.
-                ast_call_unpack(exprs + k, &f, &x);
-                uint32_t fidx = f - exprs;
-                uint32_t xidx = x - exprs;
-                coerce_to_fun_type(types + fidx, types + xidx, types + k);
-        }
 }
 
 static TypeTree *build_type_tree(const Ast *ast)
@@ -131,15 +126,13 @@ static void unparse_type_(Unparser *unp, Type *t)
         FILE *oot = unp->oot;
         int32_t idx = t - unp->types;
 
-        const AstNode *expr = unp->exprs + idx;
         int k = 0;
-        while (expr->type == ANT_CALL) {
+        uint32_t val = idx;
+        while (ANT_CALL == ast_unpack(unp->exprs, val, &val)) {
                 k++;
-                const AstNode *arg_ignored;
-                ast_call_unpack(expr, &expr, &arg_ignored);
         }
 
-        fputc(expr->VAR.token + 'A', oot);
+        fputc(val + 'A', oot);
         while (k--) {
                 fputc('r', oot);
         }

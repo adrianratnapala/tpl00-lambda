@@ -45,14 +45,25 @@ typedef struct {
 typedef struct Ast Ast;
 
 // Decodes an CALL AstNode into a function and argument pointer.
-static inline void ast_call_unpack(const AstNode *call, const AstNode **f,
-                                   const AstNode **x)
+static inline AstNodeType ast_unpack(const AstNode *nodes, uint32_t idx,
+                                     uint32_t *val)
 {
-        DIE_IF(call->type != ANT_CALL, "%s called, on non-call node.",
-               __func__);
-        const AstNode *arg = call - 1;
-        *x = arg;
-        *f = arg - call->CALL.arg_size;
+        AstNode n = nodes[idx];
+        switch ((AstNodeType)n.type) {
+        case ANT_CALL:
+                *val = idx - n.CALL.arg_size - 1;
+                return ANT_CALL;
+        case ANT_VAR:
+                *val = n.VAR.token;
+                return ANT_VAR;
+        }
+        return (AstNodeType)DIE_LCOV_EXCL_LINE(
+            "Upacking Ast node %u with bad type id %u", idx, n.type);
+}
+
+static inline int32_t ast_arg_idx(const AstNode *nodes, uint32_t call_idx)
+{
+        return call_idx - 1;
 }
 
 // --------------------------------------------------------------------------------------
