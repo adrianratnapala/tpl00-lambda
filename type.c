@@ -15,6 +15,7 @@
 
 typedef struct Type Type;
 struct Type {
+        // FIX: switch to index notation.
         Type *master_t;
         Type *arg_t, *ret_t;
 };
@@ -36,15 +37,21 @@ static Type *masterise(Type *t)
         return t->master_t = masterise(m);
 }
 
-static void coerce_to_fun_type(Type *fun_t, Type *arg_t, Type *ret_t)
+static void coerce_to_fun_type(TypeTree *ttree, int32_t ifun, int32_t icall)
 {
-        fun_t = masterise(fun_t);
-        arg_t = masterise(arg_t);
-        ret_t = masterise(ret_t);
-        DIE_IF(fun_t->arg_t,
-               "Unify() not implemented.  Cannot re-coerce function types.");
-        fun_t->arg_t = arg_t;
-        fun_t->ret_t = ret_t;
+        Type *fun = masterise(ttree->types + ifun);
+        if (fun->arg_t) {
+                // The target already as a fun-type, so leave it be.
+                // FIX: This isn't enough, we should recursively unify LHS, RHS.
+                return;
+        }
+
+        fun = masterise(fun);
+        Type *arg = ttree->types + ast_arg_idx(ttree->postfix, icall);
+        Type *ret = ttree->types + icall;
+
+        fun->arg_t = masterise(arg);
+        fun->ret_t = masterise(ret);
 }
 
 static void solve_types(TypeTree *ttree)
@@ -65,9 +72,7 @@ static void solve_types(TypeTree *ttree)
                         }
                         continue;
                 case ANT_CALL:
-                        coerce_to_fun_type(types + val,
-                                           types + ast_arg_idx(exprs, k),
-                                           types + k);
+                        coerce_to_fun_type(ttree, val, k);
                         continue;
                 }
 }
