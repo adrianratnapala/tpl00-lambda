@@ -171,58 +171,79 @@ def run_type(src):
         out, err = run_lambda(src, args={
                 "type": True,
         })
-        if out is None:
-                return out, err
-        outl = [line.strip() for line in out.strip().split('\n')]
-        return outl, err
+        assert err == None
+        types = {}
+        lines = out.strip().split('\n')
+        for l in (l.strip().split('=', 1) for l in lines):
+                k = l[0]
+                v = None
+                if len(l) > 1:
+                        v = l[1]
+                print('run_type: ', l, k ,v)
+                assert types.get(k, v) == v
+                types[k] = v
+        return types
 
 def test_type_trivial_x(xname):
         xtype = xname.upper()
-        assert run_type(xname) == X.lines(
-                xtype
-        )
+        assert run_type(xname) == {xtype: None}
 
 def test_type_call():
-        assert run_type("(x y)") == X.lines(
-                "X=(Y Xr)",
-                "Y",
-                "Xr",
+        assert run_type("(x y)") == dict(
+                X = "(Y Xr)",
+                Y = None,
+                Xr = None,
         )
 
-def test_type_call():
-        assert run_type("(x x)") == X.lines(
-                "X=(X Xr)",
-                "X=(X Xr)",
-                "Xr",
+def test_type_call_recursive():
+        assert run_type("(x x)") == dict(
+                X = "(X Xr)",
+                Xr = None,
         )
 
 def test_deepish_type():
-        assert run_type("((a b) c)") == X.lines(
-                "A=(B Ar=(C Arr))",
-                "B",
-                "Ar=(C Arr)",
-                "C",
-                "Arr",
-        )
+        types = run_type("((a b) c)")
+        A = types['A']
+        B = types['B']
+        C = types['C']
+        Ar = types['Ar']
+        Arr = types['Arr']
+        assert Arr == None
+        assert B == None
+        assert C == None
+        assert Ar == '(C Arr)'
+        assert A == '(B Ar={})'.format(Ar)
+
 
 def test_deepish_recursive_type():
-        assert run_type("((a b) a)") == X.lines(
-                "A=(B Ar=(A Arr))",
-                "B",
-                "Ar=(A=(B Ar) Arr)",
-                "A=(B Ar=(A Arr))",
-                "Arr",
-        )
+        types=run_type("((a b) a)")
+        A = types['A']
+        B = types['B']
+        Ar = types['Ar']
+        Arr = types['Arr']
+        assert Arr == None
+        assert B == None
+        assert Ar == "(A=(B Ar) Arr)"
+        assert A == "(B Ar={})".format(Ar.replace("=(B Ar)", ""))
 
 def test_deeper_recursive_type():
-        assert run_type("((((a b) c) d) a)") == X.lines(
-                "A=(B Ar=(C Arr=(D Arrr=(A Arrrr))))",
-                "B",
-                "Ar=(C Arr=(D Arrr=(A=(B Ar) Arrrr)))",
-                "C",
-                "Arr=(D Arrr=(A=(B Ar=(C Arr)) Arrrr))",
-                "D",
-                "Arrr=(A=(B Ar=(C Arr=(D Arrr))) Arrrr)",
-                "A=(B Ar=(C Arr=(D Arrr=(A Arrrr))))",
-                "Arrrr"
-        )
+        types =  run_type("((((a b) c) d) a)")
+        A = types['A']
+        B = types['B']
+        C = types['C']
+        D = types['D']
+        Ar = types['Ar']
+        Arr = types['Arr']
+        Arrr = types['Arrr']
+        Arrrr = types['Arrrr']
+
+        assert D == None
+        assert B == None
+        assert C == None
+        assert Arrrr == None
+
+        assert A == "(B Ar=(C Arr=(D Arrr=(A Arrrr))))"
+        assert Arrr == "(A={} Arrrr)".format(A.replace('=(A Arrrr)', ''))
+        assert Arr == "(D Arrr={})".format(Arrr.replace('=(D Arrr)', ''))
+        assert Ar == "(C Arr={})".format(Arr.replace('=(C Arr)', ''))
+
