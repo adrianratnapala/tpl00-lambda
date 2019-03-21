@@ -52,14 +52,31 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
         }
 }
 
-static void unify_ordered(TypeTree *ttree, int32_t imaster, int32_t islave)
+static void unify(TypeTree *ttree, int32_t ia, int32_t ib)
 {
-        if (islave == imaster)
+        Type *types = ttree->types;
+        if (ia == ib)
                 return; // FIX: prove that this is possible.
 
-        assert(imaster < islave);
-        // FIX: this is not enough, we must also recursively unify.
-        ttree->types[islave].master_t = ttree->types + imaster;
+        Type *pa = masterise(types + ia), a = *pa;
+        Type *pb = masterise(types + ib), b = *pb;
+
+        if (!a.arg_t && b.arg_t) {
+                pa->master_t = pb;
+                masterise(types + ia);
+                return;
+        }
+
+        pb->master_t = pa;
+        masterise(types + ib);
+
+        if (!b.arg_t) {
+                return;
+        }
+
+        // Both sides turned out to be function types.  Unify the components.
+        unify(ttree, a.arg_t - types, b.arg_t - types);
+        unify(ttree, a.ret_t - types, b.ret_t - types);
 }
 
 static void coerce_to_fun_type(TypeTree *ttree, int32_t ifun, int32_t icall)
@@ -68,16 +85,16 @@ static void coerce_to_fun_type(TypeTree *ttree, int32_t ifun, int32_t icall)
 
         int32_t iarg = ast_arg_idx(ttree->postfix, icall);
         int32_t iret = icall;
-        fputs("DBG: ", stderr);
-        print_typename(stderr, ttree->postfix, ifun);
-        fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
+        // fputs("DBG: ", stderr);
+        // print_typename(stderr, ttree->postfix, ifun);
+        // fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
 
         Type *fun = masterise(ttree->types + ifun);
         if (fun->arg_t) {
                 // The target already as a fun-type, so leave it be.
                 // But unify its children.
-                unify_ordered(ttree, fun->arg_t - ttree->types, iarg);
-                unify_ordered(ttree, fun->ret_t - ttree->types, icall);
+                unify(ttree, fun->arg_t - ttree->types, iarg);
+                unify(ttree, fun->ret_t - ttree->types, icall);
                 return;
         }
 

@@ -250,7 +250,6 @@ def test_deeper_recursive_type():
         assert Ar == "(C Arr={})".format(Arr.replace('=(C Arr)', ''))
 
 def test_unify_nonrecursive_functions_shallowly():
-        # FIX: this is the wrong test, there is nothing to force Ar == Br, thus
         # A and B don't have to be unified either.
         #                   0  1 234  5 678
         types = run_type("n (a x) (y a) (y b) (b x)")
@@ -281,4 +280,34 @@ def test_unify_nonrecursive_functions_shallowly():
         assert Nr == '(Yr Nrr={})'.format(Nrr)
         assert N == '(Ar Nr={})'.format(Nr)
 
+
+def test_unify_nonrecursive_functions_deeply():
+        a_and_b_are_functions = "n (a x) (b y)"
+        a_and_b_are_equal = "(z a) (z b)"
+        types = run_type(a_and_b_are_functions + " "  + a_and_b_are_equal)
+
+        X = types['X']
+        Z = types['Z']
+        Zr = types['Zr']
+        A = types['A']
+        Ar = types['Ar']
+        N = types['N']
+        Nr = types['Nr']
+        Nrr = types['Nrr']
+        Nrrr = types['Nrrr']
+        Nrrrr = types['Nrrrr']
+
+        assert 'Y' not in types.keys()
+        assert 'B' not in types.keys()
+        assert 'Br' not in types.keys()
+
+        assert  A == '(X Ar)'
+
+        assert Ar == None
+        assert Zr == None
+        assert Nrrrr == None
+        assert Nrrr == '(Zr Nrrrr)'
+        assert Nrr == '(Zr Nrrr={})'.format(Nrrr)
+        assert Nr == '(Ar Nrr={})'.format(Nrr)
+        assert N == '(Ar Nr={})'.format(Nr)
 
