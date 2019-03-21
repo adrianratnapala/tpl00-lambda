@@ -124,16 +124,11 @@ static void unparse_pop(Unparser *unp)
         unp->depth = depth;
 }
 
-static void unparse_type_(Unparser *unp, Type *t)
+static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
 {
-        t = masterise(t);
-
-        FILE *oot = unp->oot;
-        int32_t idx = t - unp->types;
-
         int k = 0;
         uint32_t val = idx;
-        while (ANT_CALL == ast_unpack(unp->exprs, val, &val)) {
+        while (ANT_CALL == ast_unpack(exprs, val, &val)) {
                 k++;
         }
 
@@ -141,6 +136,16 @@ static void unparse_type_(Unparser *unp, Type *t)
         while (k--) {
                 fputc('r', oot);
         }
+}
+
+static void unparse_type_(Unparser *unp, Type *t)
+{
+        t = masterise(t);
+
+        FILE *oot = unp->oot;
+        int32_t idx = t - unp->types;
+
+        print_typename(oot, unp->exprs, idx);
 
         Type ty = *t->master_t;
         if (!ty.arg_t) {
