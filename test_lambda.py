@@ -100,7 +100,9 @@ def run_lambda(input, faults_to_inject=(), args=None):
                 elines = (line.strip() for line in  cp.stderr.split('\n'))
                 elines = [line for line in elines if line]
                 return R(err=elines, out=None)
-        assert cp.stderr == ''
+        for line in (l.strip() for l in cp.stderr.split('\n')):
+                if line:
+                        assert line.startswith('DBG: ')
         return R(out=cp.stdout)
 
 
@@ -246,4 +248,37 @@ def test_deeper_recursive_type():
         assert Arrr == "(A={} Arrrr)".format(A.replace('=(A Arrrr)', ''))
         assert Arr == "(D Arrr={})".format(Arrr.replace('=(D Arrr)', ''))
         assert Ar == "(C Arr={})".format(Arr.replace('=(C Arr)', ''))
+
+def test_unify_nonrecursive_functions_shallowly():
+        # FIX: this is the wrong test, there is nothing to force Ar == Br, thus
+        # A and B don't have to be unified either.
+        #                   0  1 234  5 678
+        types = run_type("n (a x) (y a) (y b) (b x)")
+        print('types=', types)
+        X = types['X']
+        Y = types['Y']
+        N = types['N']
+        A = types['A']
+        Ar = types['Ar']
+        Yr = types['Yr']
+        Nr = types['Nr']
+        Nrr = types['Nrr']
+        Nrrr = types['Nrrr']
+        Nrrrr = types['Nrrrr']
+
+        assert 'B' not in types.keys()
+
+        assert Ar == None
+        assert Yr == None
+        assert X == None
+        assert Nrrrr == None
+        assert Yr == None
+
+        assert A == '(X Ar)'
+        assert Y == '(A={} Yr)'.format(A)
+        assert Nrrr == '(Ar Nrrrr)'
+        assert Nrr == '(Yr Nrrr={})'.format(Nrrr)
+        assert Nr == '(Yr Nrr={})'.format(Nrr)
+        assert N == '(Ar Nr={})'.format(Nr)
+
 

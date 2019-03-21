@@ -16,6 +16,7 @@
 typedef struct Type Type;
 struct Type {
         // FIX: switch to index notation.
+        // FIX: say first, or prior, not master.
         Type *master_t;
         Type *arg_t, *ret_t;
 };
@@ -37,21 +38,51 @@ static Type *masterise(Type *t)
         return t->master_t = masterise(m);
 }
 
+static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
+{
+        int k = 0;
+        uint32_t val = idx;
+        while (ANT_CALL == ast_unpack(exprs, val, &val)) {
+                k++;
+        }
+
+        fputc(val + 'A', oot);
+        while (k--) {
+                fputc('r', oot);
+        }
+}
+
+static void unify_ordered(TypeTree *ttree, int32_t imaster, int32_t islave)
+{
+        if (islave == imaster)
+                return; // FIX: prove that this is possible.
+
+        assert(imaster < islave);
+        // FIX: this is not enough, we must also recursively unify.
+        ttree->types[islave].master_t = ttree->types + imaster;
+}
+
 static void coerce_to_fun_type(TypeTree *ttree, int32_t ifun, int32_t icall)
 {
+        assert(ifun < icall);
+
+        int32_t iarg = ast_arg_idx(ttree->postfix, icall);
+        int32_t iret = icall;
+        fputs("DBG: ", stderr);
+        print_typename(stderr, ttree->postfix, ifun);
+        fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
+
         Type *fun = masterise(ttree->types + ifun);
         if (fun->arg_t) {
                 // The target already as a fun-type, so leave it be.
-                // FIX: This isn't enough, we should recursively unify LHS, RHS.
+                // But unify its children.
+                unify_ordered(ttree, fun->arg_t - ttree->types, iarg);
+                unify_ordered(ttree, fun->ret_t - ttree->types, icall);
                 return;
         }
 
-        fun = masterise(fun);
-        Type *arg = ttree->types + ast_arg_idx(ttree->postfix, icall);
-        Type *ret = ttree->types + icall;
-
-        fun->arg_t = masterise(arg);
-        fun->ret_t = masterise(ret);
+        fun->arg_t = masterise(ttree->types + iarg);
+        fun->ret_t = masterise(ttree->types + iret);
 }
 
 static void solve_types(TypeTree *ttree)
@@ -122,20 +153,6 @@ static void unparse_pop(Unparser *unp)
         int depth = (int)unp->depth - 1;
         assert(depth >= 0);
         unp->depth = depth;
-}
-
-static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
-{
-        int k = 0;
-        uint32_t val = idx;
-        while (ANT_CALL == ast_unpack(exprs, val, &val)) {
-                k++;
-        }
-
-        fputc(val + 'A', oot);
-        while (k--) {
-                fputc('r', oot);
-        }
 }
 
 static void unparse_type_(Unparser *unp, Type *t)
