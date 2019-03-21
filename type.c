@@ -56,7 +56,7 @@ static void unify(TypeTree *ttree, int32_t ia, int32_t ib)
 {
         Type *types = ttree->types;
         if (ia == ib)
-                return; // FIX: prove that this is possible.
+                return;
 
         Type *pa = masterise(types + ia), a = *pa;
         Type *pb = masterise(types + ib), b = *pb;

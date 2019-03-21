@@ -311,3 +311,31 @@ def test_unify_nonrecursive_functions_deeply():
         assert Nr == '(Ar Nrr={})'.format(Nrr)
         assert N == '(Ar Nr={})'.format(Nr)
 
+def test_unify_out_of_order():
+        a_before_b = "n (w a) (x b)"
+        b_is_fun = "(b y)"
+        a_equals_b = "(z a) (z b)"
+        types = run_type(' '.join([a_before_b, b_is_fun, a_equals_b]))
+
+        assert 'A' not in types.keys()
+        assert 'Ar' not in types.keys()
+        W = types['W']
+        X = types['X']
+        Y = types['Y']
+        Z = types['Z']
+        Zr = types['Zr']
+        B = types['B']
+        Br = types['Br']
+
+        assert Zr == None
+        assert Br == None
+        assert Y == None
+
+        assert B == '(Y Br)'
+
+        assert Z == '(B={} Zr)'.format(B)
+        assert W == '(B={} Wr)'.format(B)
+        assert X == '(B={} Xr)'.format(B)
+
+
+
