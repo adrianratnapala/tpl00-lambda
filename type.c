@@ -17,7 +17,7 @@ typedef struct Type Type;
 struct Type {
         int32_t delta;
         // FIX: switch to index notation.
-        Type *arg_t, *ret_t;
+        Type *ret_t;
 };
 
 typedef struct {
@@ -67,10 +67,10 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
 bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
 {
         Type t = types[idx];
-        if(!t.arg_t) {
+        if(!t.ret_t) {
                 return false;
         }
-        *arg = t.arg_t - types;
+        *arg = t.ret_t - types - 1;
         *ret = t.ret_t - types;
         return true;
 }
@@ -124,7 +124,6 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
                 return;
         }
 
-        types[ifun].arg_t = types + iarg;
         types[ifun].ret_t = types + iret;
 }
 
