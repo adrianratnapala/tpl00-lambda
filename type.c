@@ -29,13 +29,22 @@ typedef struct {
         Type types[];
 } TypeTree;
 
-static Type *masterise(Type *t)
+// FIX: get rid of this.
+static Type *pmasterise(Type *t)
 {
         Type *m = t->master_t;
         if (m == t) {
                 return t;
         }
-        return t->master_t = masterise(m);
+        return t->master_t = pmasterise(m);
+}
+
+// FIX: be consistent about int vs uint
+static uint32_t masterise(Type *types, uint32_t idx)
+{
+        Type *t = pmasterise(types + idx);
+        assert(t >= types);
+        return t - types;
 }
 
 static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
@@ -52,27 +61,30 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
         }
 }
 
-static void unify(TypeTree *ttree, int32_t ia, int32_t ib)
+static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 {
         Type *types = ttree->types;
+
+        // FIX: masterise first!
         if (ia == ib)
                 return;
 
-        Type *pa = masterise(types + ia), a = *pa;
-        Type *pb = masterise(types + ib), b = *pb;
+        // FIX: make sure ia, ib are already masterised?
+        ia = masterise(types, ia);
+        ib = masterise(types, ib);
+        Type a = types[ia], b = types[ib];
 
         if (!a.arg_t && b.arg_t) {
-                pa->arg_t = b.arg_t;
-                pa->ret_t = b.ret_t;
-                assert(pa->master_t == pa);
+                types[ia] = b;
+                types[ia].master_t = ia + types;
 
-                *pb = (Type){.master_t = pa};
-                masterise(types + ib);
+                types[ib] = (Type){.master_t = ia + types};
+                masterise(types, ib); // FIX: redundant.
                 return;
         }
 
-        pb->master_t = pa;
-        masterise(types + ib);
+        types[ib].master_t = types + ia;
+        masterise(types, ib); // FIX: redundant, also repeated.
 
         if (!b.arg_t) {
                 return;
@@ -83,27 +95,29 @@ static void unify(TypeTree *ttree, int32_t ia, int32_t ib)
         unify(ttree, a.ret_t - types, b.ret_t - types);
 }
 
-static void coerce_to_fun_type(TypeTree *ttree, int32_t ifun, int32_t icall)
+static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
 {
+        Type *types = ttree->types;
         assert(ifun < icall);
 
-        int32_t iarg = ast_arg_idx(ttree->postfix, icall);
-        int32_t iret = icall;
+        uint32_t iarg = ast_arg_idx(ttree->postfix, icall);
+        uint32_t iret = icall;
         // fputs("DBG: ", stderr);
         // print_typename(stderr, ttree->postfix, ifun);
         // fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
 
-        Type *fun = masterise(ttree->types + ifun);
-        if (fun->arg_t) {
+        ifun = masterise(types, ifun);
+        Type fun = types[ifun];
+        if (fun.arg_t) {
                 // The target already as a fun-type, so leave it be.
                 // But unify its children.
-                unify(ttree, fun->arg_t - ttree->types, iarg);
-                unify(ttree, fun->ret_t - ttree->types, icall);
+                unify(ttree, fun.arg_t - types, iarg);
+                unify(ttree, fun.ret_t - types, icall);
                 return;
         }
 
-        fun->arg_t = masterise(ttree->types + iarg);
-        fun->ret_t = masterise(ttree->types + iret);
+        types[ifun].arg_t = types + masterise(types, iarg);
+        types[ifun].ret_t = types + masterise(types, iret);
 }
 
 static void solve_types(TypeTree *ttree)
@@ -178,10 +192,11 @@ static void unparse_pop(Unparser *unp)
 
 static void unparse_type_(Unparser *unp, Type *t)
 {
-        t = masterise(t);
-
+        Type *types = unp->types;
         FILE *oot = unp->oot;
-        int32_t idx = t - unp->types;
+
+        uint32_t idx = masterise(types, t - types);
+        t = types + idx;
 
         print_typename(oot, unp->exprs, idx);
 
