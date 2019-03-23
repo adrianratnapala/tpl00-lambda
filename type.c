@@ -16,8 +16,7 @@
 typedef struct Type Type;
 struct Type {
         // FIX: switch to index notation.
-        // FIX: say first, or prior, not master.
-        Type *master_t;
+        uint32_t prior; // FIX: use delta instead
         Type *arg_t, *ret_t;
 };
 
@@ -30,21 +29,29 @@ typedef struct {
 } TypeTree;
 
 // FIX: get rid of this.
-static Type *pmasterise(Type *t)
+static Type *pmasterise(Type *types, Type *t)
 {
-        Type *m = t->master_t;
+        Type *m = types + t->prior;
         if (m == t) {
                 return t;
         }
-        return t->master_t = pmasterise(m);
+        m = pmasterise(types, m);
+        t->prior = m - types;
+        return m;
 }
 
 // FIX: be consistent about int vs uint
 static uint32_t masterise(Type *types, uint32_t idx)
 {
-        Type *t = pmasterise(types + idx);
+        Type *t = pmasterise(types, types + idx);
         assert(t >= types);
         return t - types;
+}
+
+static void set_prior(Type *types, uint32_t target, int32_t prior)
+{
+        // FIX? so should we get rid of he unused arg.
+        types[target].prior = prior;
 }
 
 static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
@@ -74,13 +81,12 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 
         if (!a.arg_t && b.arg_t) {
                 types[ia] = b;
-                types[ia].master_t = ia + types;
-
-                types[ib] = (Type){.master_t = ia + types};
+                set_prior(types, ia, ia);
+                set_prior(types, ib, ia);
                 return;
         }
 
-        types[ib].master_t = types + ia;
+        set_prior(types, ib, ia);
 
         if (!b.arg_t) {
                 return;
@@ -121,7 +127,7 @@ static void bind_to_typevar(TypeTree *tree, uint32_t target, uint32_t tok)
         DIE_IF(tok > MAX_TOKS, "Overbig token %u", tok);
         Type *binding = tree->bindings[tok];
         if (binding) {
-                tree->types[target] = *binding;
+                set_prior(tree->types, target, binding - tree->types);
         } else {
                 tree->bindings[tok] = tree->types + target;
         }
@@ -152,9 +158,8 @@ static TypeTree *build_type_tree(const Ast *ast)
             realloc_or_die(HERE, 0, sizeof(TypeTree) + sizeof(Type) * size);
         *tree = (TypeTree){.postfix = postfix, .size = size};
         for (int k = 0; k < size; k++) {
-                // FIX: merge this loop with the one in solve_tree
-                Type *t = tree->types + k;
-                *t = (Type){.master_t = t};
+                tree->types[k] = (Type){0};
+                set_prior(tree->types, k, k);
         }
 
         solve_types(tree);
@@ -174,7 +179,6 @@ typedef struct {
 
 static bool unparse_push(Unparser *unp, Type *type)
 {
-        assert(type == type->master_t); // FIX: the names
         uint32_t depth = unp->depth, k = depth;
         while (k--)
                 if (unp->stack[k] == type)
