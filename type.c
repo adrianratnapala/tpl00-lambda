@@ -86,15 +86,14 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
                 return;
         }
 
+        bool both_are_functions = is_function(types, ib);
+
         set_prior(types, ib, ia);
 
-        if (!is_function(types, ib)) {
-                return;
+        if(both_are_functions) {
+                unify(ttree, a.arg_t - types, b.arg_t - types);
+                unify(ttree, a.ret_t - types, b.ret_t - types);
         }
-
-        // Both sides turned out to be function types.  Unify the components.
-        unify(ttree, a.arg_t - types, b.arg_t - types);
-        unify(ttree, a.ret_t - types, b.ret_t - types);
 }
 
 static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
