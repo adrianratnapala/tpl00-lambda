@@ -116,22 +116,27 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
         types[ifun].ret_t = types + iret;
 }
 
+static void bind_to_typevar(TypeTree *tree, uint32_t target, uint32_t tok)
+{
+        DIE_IF(tok > MAX_TOKS, "Overbig token %u", tok);
+        Type *binding = tree->bindings[tok];
+        if (binding) {
+                tree->types[target] = *binding;
+        } else {
+                tree->bindings[tok] = tree->types + target;
+        }
+}
+
 static void solve_types(TypeTree *ttree)
 {
         const AstNode *exprs = ttree->postfix;
-        Type *types = ttree->types;
         uint32_t size = ttree->size;
 
         uint32_t val;
         for (int k = 0; k < size; k++)
                 switch (ast_unpack(exprs, k, &val)) {
                 case ANT_VAR:
-                        DIE_IF(val > MAX_TOKS, "Overbig token %u", val);
-                        if (ttree->bindings[val]) {
-                                types[k] = *ttree->bindings[val];
-                        } else {
-                                ttree->bindings[val] = types + k;
-                        }
+                        bind_to_typevar(ttree, k, val);
                         continue;
                 case ANT_CALL:
                         coerce_to_fun_type(ttree, val, k);
