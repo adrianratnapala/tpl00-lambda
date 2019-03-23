@@ -64,6 +64,11 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
         }
 }
 
+bool is_function(Type *types, uint32_t idx)
+{
+        return types[idx].arg_t;
+}
+
 static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 {
         Type *types = ttree->types;
@@ -75,7 +80,7 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 
         Type a = types[ia], b = types[ib];
 
-        if (!a.arg_t && b.arg_t) {
+        if (!is_function(types, ia) && is_function(types, ib)) {
                 types[ia] = b;
                 set_prior(types, ib, ia);
                 return;
@@ -83,7 +88,7 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 
         set_prior(types, ib, ia);
 
-        if (!b.arg_t) {
+        if (!is_function(types, ib)) {
                 return;
         }
 
@@ -105,7 +110,7 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
 
         ifun = masterise(types, ifun);
         Type fun = types[ifun];
-        if (fun.arg_t) {
+        if (is_function(types, ifun)) {
                 // The target already as a fun-type, so leave it be.
                 // But unify its children.
                 unify(ttree, fun.arg_t - types, iarg);
@@ -200,7 +205,7 @@ static void unparse_type_(Unparser *unp, Type *t)
         print_typename(oot, unp->exprs, idx);
 
         Type ty = *t;
-        if (!ty.arg_t) {
+        if (!is_function(types, t-types)) {
                 // if it's not a function there is no structure to expand.
                 return;
         }
