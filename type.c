@@ -46,8 +46,8 @@ static uint32_t masterise(Type *types, uint32_t idx)
 static void set_prior(Type *types, uint32_t target, int32_t prior)
 {
         // FIX? so should we get rid of he unused arg.
-        assert(prior <= target);
-        types[target].delta = prior - target;
+        assert(prior < target);
+        types[target] = (Type){.delta = prior - target};
 }
 
 static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
@@ -77,7 +77,6 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 
         if (!a.arg_t && b.arg_t) {
                 types[ia] = b;
-                set_prior(types, ia, ia);
                 set_prior(types, ib, ia);
                 return;
         }
@@ -155,7 +154,6 @@ static TypeTree *build_type_tree(const Ast *ast)
         *tree = (TypeTree){.postfix = postfix, .size = size};
         for (int k = 0; k < size; k++) {
                 tree->types[k] = (Type){0};
-                set_prior(tree->types, k, k);
         }
 
         solve_types(tree);
