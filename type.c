@@ -32,7 +32,7 @@ typedef struct {
 static uint32_t masterise(Type *types, uint32_t idx)
 {
         Type t = types[idx];
-        if (t.delta == 0)
+        if (t.delta >= 0)
                 return idx;
 
         assert(t.delta < 0);
