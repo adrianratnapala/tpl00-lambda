@@ -65,13 +65,11 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 {
         Type *types = ttree->types;
 
-        // FIX: masterise first!
+        ia = masterise(types, ia);
+        ib = masterise(types, ib);
         if (ia == ib)
                 return;
 
-        // FIX: make sure ia, ib are already masterised?
-        ia = masterise(types, ia);
-        ib = masterise(types, ib);
         Type a = types[ia], b = types[ib];
 
         if (!a.arg_t && b.arg_t) {
@@ -79,12 +77,10 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
                 types[ia].master_t = ia + types;
 
                 types[ib] = (Type){.master_t = ia + types};
-                masterise(types, ib); // FIX: redundant.
                 return;
         }
 
         types[ib].master_t = types + ia;
-        masterise(types, ib); // FIX: redundant, also repeated.
 
         if (!b.arg_t) {
                 return;
