@@ -64,10 +64,18 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
         }
 }
 
-bool is_function(Type *types, uint32_t idx)
+bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
 {
-        return types[idx].arg_t;
+        Type t = types[idx];
+        if(!t.arg_t) {
+                return false;
+        }
+        *arg = t.arg_t - types;
+        *ret = t.ret_t - types;
+        return true;
 }
+
+
 
 static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 {
@@ -78,21 +86,22 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
         if (ia == ib)
                 return;
 
-        Type a = types[ia], b = types[ib];
+        uint32_t aarg, aret;
+        uint32_t barg, bret;
 
-        if (!is_function(types, ia) && is_function(types, ib)) {
-                types[ia] = b;
+        bool a_is_fun = as_function(types, ia, &aarg, &aret);
+        bool b_is_fun = as_function(types, ib, &barg, &bret);
+
+        if (!a_is_fun && b_is_fun) {
+                types[ia] = types[ib];
                 set_prior(types, ib, ia);
                 return;
         }
-
-        bool both_are_functions = is_function(types, ib);
-
         set_prior(types, ib, ia);
 
-        if(both_are_functions) {
-                unify(ttree, a.arg_t - types, b.arg_t - types);
-                unify(ttree, a.ret_t - types, b.ret_t - types);
+        if(a_is_fun && b_is_fun) {
+                unify(ttree, aarg, barg);
+                unify(ttree, aret, bret);
         }
 }
 
@@ -108,12 +117,10 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
         // fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
 
         ifun = masterise(types, ifun);
-        Type fun = types[ifun];
-        if (is_function(types, ifun)) {
-                // The target already as a fun-type, so leave it be.
-                // But unify its children.
-                unify(ttree, fun.arg_t - types, iarg);
-                unify(ttree, fun.ret_t - types, icall);
+        uint32_t old_iarg, old_iret;
+        if (as_function(types, ifun, &old_iarg, &old_iret)) {
+                unify(ttree, old_iarg, iarg);
+                unify(ttree, old_iret, icall);
                 return;
         }
 
@@ -203,8 +210,9 @@ static void unparse_type_(Unparser *unp, Type *t)
 
         print_typename(oot, unp->exprs, idx);
 
-        Type ty = *t;
-        if (!is_function(types, t-types)) {
+        // FIX: this function should take indexes, not pointers.
+        uint32_t iarg, iret;
+        if (!as_function(types, t-types, &iarg, &iret)) {
                 // if it's not a function there is no structure to expand.
                 return;
         }
@@ -215,9 +223,9 @@ static void unparse_type_(Unparser *unp, Type *t)
         }
 
         fputs("=(", oot);
-        unparse_type_(unp, ty.arg_t);
+        unparse_type_(unp, types + iarg);
         fputc(' ', oot);
-        unparse_type_(unp, ty.ret_t);
+        unparse_type_(unp, types + iret);
         fputc(')', oot);
         unparse_pop(unp);
 }
