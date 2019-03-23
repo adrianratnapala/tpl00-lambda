@@ -112,8 +112,8 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
                 return;
         }
 
-        types[ifun].arg_t = types + masterise(types, iarg);
-        types[ifun].ret_t = types + masterise(types, iret);
+        types[ifun].arg_t = types + iarg;
+        types[ifun].ret_t = types + iret;
 }
 
 static void solve_types(TypeTree *ttree)
@@ -196,7 +196,7 @@ static void unparse_type_(Unparser *unp, Type *t)
 
         print_typename(oot, unp->exprs, idx);
 
-        Type ty = *t->master_t;
+        Type ty = *t;
         if (!ty.arg_t) {
                 // if it's not a function there is no structure to expand.
                 return;
