@@ -16,8 +16,6 @@
 typedef struct Type Type;
 struct Type {
         int32_t delta;
-        // FIX: switch to index notation.
-        Type *ret_t;
 };
 
 typedef struct {
@@ -64,23 +62,20 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
         }
 }
 
-void set_function(Type *types, uint32_t ifun, uint32_t iret)
+static void set_function(Type *types, uint32_t ifun, uint32_t iret)
 {
-        types[ifun].ret_t = types + iret;
         types[ifun].delta = iret - ifun;
 }
 
-bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
+static bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
 {
         Type t = types[idx];
-        if(!t.ret_t) {
-                assert(t.delta <= 0);
+        if(t.delta <= 0) {
                 return false;
         }
-        uint32_t iret =  t.ret_t - types;
+        uint32_t iret = idx + t.delta;
         *arg = iret - 1;
         *ret = iret;
-        assert(t.delta == iret - idx);
         return true;
 }
 
