@@ -62,8 +62,12 @@ static void unify(TypeTree *ttree, int32_t ia, int32_t ib)
         Type *pb = masterise(types + ib), b = *pb;
 
         if (!a.arg_t && b.arg_t) {
-                pa->master_t = pb;
-                masterise(types + ia);
+                pa->arg_t = b.arg_t;
+                pa->ret_t = b.ret_t;
+                assert(pa->master_t == pa);
+
+                *pb = (Type){.master_t = pa};
+                masterise(types + ib);
                 return;
         }
 

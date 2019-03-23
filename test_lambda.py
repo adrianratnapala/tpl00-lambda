@@ -317,25 +317,29 @@ def test_unify_out_of_order():
         a_equals_b = "(z a) (z b)"
         types = run_type(' '.join([a_before_b, b_is_fun, a_equals_b]))
 
-        assert 'A' not in types.keys()
+        # `a` appears before `b` so the type gets the name `A`.
+        assert 'B' not in types.keys()
+
+        # But `A` only becomes a function by being unified with `B = (Y Br)`
+        # and `Ar` never existed -- the return type is still `Br`.
         assert 'Ar' not in types.keys()
+        A = types['A']
+        assert A == '(Y Br)'
+
         W = types['W']
         X = types['X']
         Y = types['Y']
         Z = types['Z']
         Zr = types['Zr']
-        B = types['B']
         Br = types['Br']
 
         assert Zr == None
         assert Br == None
         assert Y == None
 
-        assert B == '(Y Br)'
-
-        assert Z == '(B={} Zr)'.format(B)
-        assert W == '(B={} Wr)'.format(B)
-        assert X == '(B={} Xr)'.format(B)
+        assert Z == '(A={} Zr)'.format(A)
+        assert W == '(A={} Wr)'.format(A)
+        assert X == '(A={} Xr)'.format(A)
 
 
 
