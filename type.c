@@ -64,14 +64,23 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
         }
 }
 
+void set_function(Type *types, uint32_t ifun, uint32_t iret)
+{
+        types[ifun].ret_t = types + iret;
+        types[ifun].delta = iret - ifun;
+}
+
 bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
 {
         Type t = types[idx];
         if(!t.ret_t) {
+                assert(t.delta <= 0);
                 return false;
         }
-        *arg = t.ret_t - types - 1;
-        *ret = t.ret_t - types;
+        uint32_t iret =  t.ret_t - types;
+        *arg = iret - 1;
+        *ret = iret;
+        assert(t.delta == iret - idx);
         return true;
 }
 
@@ -93,7 +102,7 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
         bool b_is_fun = as_function(types, ib, &barg, &bret);
 
         if (!a_is_fun && b_is_fun) {
-                types[ia] = types[ib];
+                set_function(types, ia, bret);
                 set_prior(types, ib, ia);
                 return;
         }
@@ -124,7 +133,7 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
                 return;
         }
 
-        types[ifun].ret_t = types + iret;
+        set_function(types, ifun, iret);
 }
 
 static void bind_to_typevar(TypeTree *tree, uint32_t target, uint32_t tok)
