@@ -15,8 +15,8 @@
 
 typedef struct Type Type;
 struct Type {
+        int32_t delta;
         // FIX: switch to index notation.
-        uint32_t prior; // FIX: use delta instead
         Type *arg_t, *ret_t;
 };
 
@@ -28,30 +28,26 @@ typedef struct {
         Type types[];
 } TypeTree;
 
-// FIX: get rid of this.
-static Type *pmasterise(Type *types, Type *t)
-{
-        Type *m = types + t->prior;
-        if (m == t) {
-                return t;
-        }
-        m = pmasterise(types, m);
-        t->prior = m - types;
-        return m;
-}
-
-// FIX: be consistent about int vs uint
+// FIX: find a better name.
 static uint32_t masterise(Type *types, uint32_t idx)
 {
-        Type *t = pmasterise(types, types + idx);
-        assert(t >= types);
-        return t - types;
+        Type t = types[idx];
+        if (t.delta == 0)
+                return idx;
+
+        assert(t.delta < 0);
+        uint32_t first = masterise(types, idx + t.delta);
+        types[idx].delta = first - idx;
+        assert(types[idx].delta < 0);
+
+        return first;
 }
 
 static void set_prior(Type *types, uint32_t target, int32_t prior)
 {
         // FIX? so should we get rid of he unused arg.
-        types[target].prior = prior;
+        assert(prior <= target);
+        types[target].delta = prior - target;
 }
 
 static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
