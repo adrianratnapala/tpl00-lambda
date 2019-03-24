@@ -67,7 +67,8 @@ static void set_function(Type *types, uint32_t ifun, uint32_t iret)
         types[ifun].delta = iret - ifun;
 }
 
-static bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
+static bool as_function(const Type *types, uint32_t idx, uint32_t *arg,
+                        uint32_t *ret)
 {
         Type t = types[idx];
         if (t.delta <= 0) {
@@ -164,11 +165,16 @@ static TypeTree *build_type_tree(const Ast *ast)
         TypeTree *tree =
             realloc_or_die(HERE, 0, sizeof(TypeTree) + sizeof(Type) * size);
         *tree = (TypeTree){.postfix = postfix, .size = size};
-        for (int k = 0; k < size; k++) {
+        for (uint32_t k = 0; k < size; k++) {
                 tree->types[k] = (Type){0};
         }
 
         solve_types(tree);
+
+        for (uint32_t k = 0; k < size; k++) {
+                masterise(tree->types, k);
+        }
+
         return tree;
 }
 
@@ -177,13 +183,13 @@ static TypeTree *build_type_tree(const Ast *ast)
 typedef struct {
         FILE *oot;
         const AstNode *exprs; // FIX: pick a name, exprs or postfix
-        Type *types; // FIX: make this const, let one-hop master be the rule.
+        const Type *types;
         uint32_t depth;
         uint32_t ntypes;
-        Type *stack[MAX_DEPTH];
+        const Type *stack[MAX_DEPTH];
 } Unparser;
 
-static bool unparse_push(Unparser *unp, Type *type)
+static bool unparse_push(Unparser *unp, const Type *type)
 {
         uint32_t depth = unp->depth, k = depth;
         while (k--)
@@ -201,13 +207,16 @@ static void unparse_pop(Unparser *unp)
         unp->depth = depth;
 }
 
-static void unparse_type_(Unparser *unp, Type *t)
+static void unparse_type_(Unparser *unp, const Type *t)
 {
-        Type *types = unp->types;
+        const Type *types = unp->types;
         FILE *oot = unp->oot;
 
-        uint32_t idx = masterise(types, t - types);
-        t = types + idx;
+        // FIX: hide the delta.
+        int32_t delta = t->delta;
+        if (delta < 0)
+                t += delta;
+        uint32_t idx = t - types;
 
         print_typename(oot, unp->exprs, idx);
 
@@ -231,8 +240,7 @@ static void unparse_type_(Unparser *unp, Type *t)
         unparse_pop(unp);
 }
 
-// FIX: make all the args const.
-static void unparse_type(FILE *oot, TypeTree *tree, Type *t)
+static void unparse_type(FILE *oot, const TypeTree *tree, const Type *t)
 {
         Unparser unp = {
             .oot = oot,
