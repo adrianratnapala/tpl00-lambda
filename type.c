@@ -70,7 +70,7 @@ static void set_function(Type *types, uint32_t ifun, uint32_t iret)
 static bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
 {
         Type t = types[idx];
-        if(t.delta <= 0) {
+        if (t.delta <= 0) {
                 return false;
         }
         uint32_t iret = idx + t.delta;
@@ -78,8 +78,6 @@ static bool as_function(Type *types, uint32_t idx, uint32_t *arg, uint32_t *ret)
         *ret = iret;
         return true;
 }
-
-
 
 static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
 {
@@ -103,7 +101,7 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
         }
         set_prior(types, ib, ia);
 
-        if(a_is_fun && b_is_fun) {
+        if (a_is_fun && b_is_fun) {
                 unify(ttree, aarg, barg);
                 unify(ttree, aret, bret);
         }
@@ -215,7 +213,7 @@ static void unparse_type_(Unparser *unp, Type *t)
 
         // FIX: this function should take indexes, not pointers.
         uint32_t iarg, iret;
-        if (!as_function(types, t-types, &iarg, &iret)) {
+        if (!as_function(types, t - types, &iarg, &iret)) {
                 // if it's not a function there is no structure to expand.
                 return;
         }
