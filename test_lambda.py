@@ -354,7 +354,10 @@ def test_unify_recursive():
         assert A == '(A Ar)'
         assert X == '(A=(A Ar) Xr)'
 
-def test_unify_recursive_shallowly():
+def test_unify_shallow_but_long_recursion():
+        # "long" means that the recursion is indirect (so the recursion is
+        # deep in the type stack).  However it is shallow in the sense that all
+        # do is coerce one typvar to a function in order to close the loop.
         chain_of_types = "n (a b) (b c) (c d)"
         closed_chain = chain_of_types + " (d a)"
         types = run_type(closed_chain)
