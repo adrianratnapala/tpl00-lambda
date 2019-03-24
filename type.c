@@ -36,14 +36,14 @@ static uint32_t one_step_master(const Type *types, uint32_t idx)
         return idx;
 }
 
-static uint32_t masterise(Type *types, uint32_t idx)
+static uint32_t relink_to_first(Type *types, uint32_t idx)
 {
         Type t = types[idx];
         if (t.delta >= 0)
                 return idx;
 
         assert(t.delta < 0);
-        uint32_t first = masterise(types, idx + t.delta);
+        uint32_t first = relink_to_first(types, idx + t.delta);
         types[idx].delta = first - idx;
         assert(types[idx].delta < 0);
 
@@ -94,8 +94,8 @@ static bool as_function(const Type *types, uint32_t idx, uint32_t *ret)
 
 static void unify(Type *types, uint32_t ia, uint32_t ib)
 {
-        ia = masterise(types, ia);
-        ib = masterise(types, ib);
+        ia = relink_to_first(types, ia);
+        ib = relink_to_first(types, ib);
         if (ia == ib)
                 return;
 
@@ -124,11 +124,7 @@ static void coerce_to_fun_type(Type *types, uint32_t ifun, uint32_t iret)
 {
         assert(ifun < iret);
 
-        // fputs("DBG: ", stderr);
-        // print_typename(stderr, ttree->postfix, ifun);
-        // fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
-
-        ifun = masterise(types, ifun);
+        ifun = relink_to_first(types, ifun);
         uint32_t old_iret;
         if (as_function(types, ifun, &old_iret)) {
                 uint32_t old_iarg = arg_from_ret(types, old_iret);
@@ -181,7 +177,7 @@ static TypeGraph *build_type_graph(const Ast *ast)
         }
 
         for (uint32_t k = 0; k < size; k++) {
-                masterise(types, k);
+                relink_to_first(types, k);
         }
 
         return tg;
