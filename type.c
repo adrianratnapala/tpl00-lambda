@@ -186,16 +186,16 @@ typedef struct {
         const Type *types;
         uint32_t depth;
         uint32_t ntypes;
-        const Type *stack[MAX_DEPTH];
+        uint32_t stack[MAX_DEPTH];
 } Unparser;
 
-static bool unparse_push(Unparser *unp, const Type *type)
+static bool unparse_push(Unparser *unp, uint32_t idx)
 {
         uint32_t depth = unp->depth, k = depth;
         while (k--)
-                if (unp->stack[k] == type)
+                if (unp->stack[k] == idx)
                         return false;
-        unp->stack[depth] = type;
+        unp->stack[depth] = idx;
         unp->depth = depth + 1;
         return true;
 }
@@ -225,7 +225,7 @@ static void unparse_type_(Unparser *unp, uint32_t idx)
                 return;
         }
 
-        if (!unparse_push(unp, types + idx)) {
+        if (!unparse_push(unp, idx)) {
                 // Push failure means we have found recursion.
                 return;
         }
