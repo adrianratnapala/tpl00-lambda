@@ -99,16 +99,13 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
         if (ia == ib)
                 return;
 
-        uint32_t aret;
-        uint32_t bret;
-
+        uint32_t aret, bret;
         bool a_is_fun = as_function(types, ia, &aret);
         bool b_is_fun = as_function(types, ib, &bret);
 
         if (!a_is_fun && b_is_fun) {
+                // Copy the contents of B into A, so that we can discard B.
                 set_function(types, ia, bret);
-                set_prior(types, ib, ia);
-                return;
         }
         set_prior(types, ib, ia);
 
