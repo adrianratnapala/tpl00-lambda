@@ -151,21 +151,19 @@ static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
         }
 }
 
-static void solve_types(TypeGraph *tg)
+static void infer_new_type(TypeGraph *tg, uint32_t idx)
 {
-        const AstNode *exprs = tg->exprs;
-        uint32_t size = tg->size;
-
         uint32_t val;
-        for (int k = 0; k < size; k++)
-                switch (ast_unpack(exprs, k, &val)) {
-                case ANT_VAR:
-                        bind_to_typevar(tg, k, val);
-                        continue;
-                case ANT_CALL:
-                        coerce_to_fun_type(tg->types, val, k);
-                        continue;
-                }
+        AstNodeType tag = ast_unpack(tg->exprs, idx, &val);
+        switch (tag) {
+        case ANT_VAR:
+                bind_to_typevar(tg, idx, val);
+                return;
+        case ANT_CALL:
+                coerce_to_fun_type(tg->types, val, idx);
+                return;
+        }
+        DIE_LCOV_EXCL_LINE("Typeg found expr %u with bad type id %d", idx, tag);
 }
 
 static TypeGraph *build_type_graph(const Ast *ast)
@@ -179,9 +177,8 @@ static TypeGraph *build_type_graph(const Ast *ast)
         Type *types = tg->types;
         for (uint32_t k = 0; k < size; k++) {
                 types[k] = (Type){0};
+                infer_new_type(tg, k);
         }
-
-        solve_types(tg);
 
         for (uint32_t k = 0; k < size; k++) {
                 masterise(types, k);
