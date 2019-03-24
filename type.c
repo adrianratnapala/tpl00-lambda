@@ -76,15 +76,18 @@ static void set_function(Type *types, uint32_t ifun, uint32_t iret)
         types[ifun].delta = iret - ifun;
 }
 
-static bool as_function(const Type *types, uint32_t idx, uint32_t *arg,
-                        uint32_t *ret)
+static uint32_t arg_from_ret(const Type *types, uint32_t ret)
+{
+        return ret - 1;
+}
+
+static bool as_function(const Type *types, uint32_t idx, uint32_t *ret)
 {
         Type t = types[idx];
         if (t.delta <= 0) {
                 return false;
         }
         uint32_t iret = idx + t.delta;
-        *arg = iret - 1;
         *ret = iret;
         return true;
 }
@@ -98,11 +101,11 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
         if (ia == ib)
                 return;
 
-        uint32_t aarg, aret;
-        uint32_t barg, bret;
+        uint32_t aret;
+        uint32_t bret;
 
-        bool a_is_fun = as_function(types, ia, &aarg, &aret);
-        bool b_is_fun = as_function(types, ib, &barg, &bret);
+        bool a_is_fun = as_function(types, ia, &aret);
+        bool b_is_fun = as_function(types, ib, &bret);
 
         if (!a_is_fun && b_is_fun) {
                 set_function(types, ia, bret);
@@ -112,6 +115,8 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
         set_prior(types, ib, ia);
 
         if (a_is_fun && b_is_fun) {
+                uint32_t aarg = arg_from_ret(types, aret);
+                uint32_t barg = arg_from_ret(types, bret);
                 unify(ttree, aarg, barg);
                 unify(ttree, aret, bret);
         }
@@ -129,8 +134,9 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
         // fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
 
         ifun = masterise(types, ifun);
-        uint32_t old_iarg, old_iret;
-        if (as_function(types, ifun, &old_iarg, &old_iret)) {
+        uint32_t old_iret;
+        if (as_function(types, ifun, &old_iret)) {
+                uint32_t old_iarg = arg_from_ret(types, old_iret);
                 unify(ttree, old_iarg, iarg);
                 unify(ttree, old_iret, icall);
                 return;
@@ -198,7 +204,8 @@ typedef struct {
         uint32_t stack[MAX_DEPTH];
 } Unparser;
 
-typedef enum {
+typedef enum
+{
         RECURSION_NOT_FOUND,
         RECURSION_FOUND,
 } RecursionFound;
@@ -232,8 +239,8 @@ static void unparse_type_(Unparser *unp, uint32_t idx)
 
 static void unparse_function_expansion(Unparser *unp, uint32_t idx)
 {
-        uint32_t iarg, iret;
-        if (!as_function(unp->types, idx, &iarg, &iret)) {
+        uint32_t iret;
+        if (!as_function(unp->types, idx, &iret)) {
                 return;
         }
 
@@ -241,6 +248,7 @@ static void unparse_function_expansion(Unparser *unp, uint32_t idx)
                 return;
         }
 
+        uint32_t iarg = arg_from_ret(unp->types, iret);
         FILE *oot = unp->oot;
         fputs("=(", oot);
         unparse_type_(unp, iarg);
