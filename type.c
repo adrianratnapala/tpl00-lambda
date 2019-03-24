@@ -159,7 +159,7 @@ static void infer_new_type(TypeGraph *tg, uint32_t idx)
                 coerce_to_fun_type(tg->types, val, idx);
                 return;
         }
-        DIE_LCOV_EXCL_LINE("Typeg found expr %u with bad type id %d", idx, tag);
+        DIE_LCOV_EXCL_LINE("Typing found expr %u with bad tag %d", idx, tag);
 }
 
 static TypeGraph *build_type_graph(const Ast *ast)
