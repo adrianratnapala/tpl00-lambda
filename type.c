@@ -120,7 +120,7 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
         }
 }
 
-static void coerce_to_fun_type(Type *types, uint32_t ifun, uint32_t iret)
+static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
 {
         assert(ifun < iret);
 
@@ -156,7 +156,7 @@ static void infer_new_type(TypeGraph *tg, uint32_t idx)
                 bind_to_typevar(tg, idx, val);
                 return;
         case ANT_CALL:
-                coerce_to_fun_type(tg->types, val, idx);
+                coerce_callee(tg->types, val, idx);
                 return;
         }
         DIE_LCOV_EXCL_LINE("Typing found expr %u with bad tag %d", idx, tag);
