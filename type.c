@@ -24,7 +24,7 @@ typedef struct {
         uint32_t pad;
         Type *bindings[MAX_TOKS];
         Type types[];
-} TypeTree;
+} TypeGraph;
 
 static uint32_t one_step_master(const Type *types, uint32_t idx)
 {
@@ -92,10 +92,8 @@ static bool as_function(const Type *types, uint32_t idx, uint32_t *ret)
         return true;
 }
 
-static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
+static void unify(Type *types, uint32_t ia, uint32_t ib)
 {
-        Type *types = ttree->types;
-
         ia = masterise(types, ia);
         ib = masterise(types, ib);
         if (ia == ib)
@@ -117,18 +115,15 @@ static void unify(TypeTree *ttree, uint32_t ia, uint32_t ib)
         if (a_is_fun && b_is_fun) {
                 uint32_t aarg = arg_from_ret(types, aret);
                 uint32_t barg = arg_from_ret(types, bret);
-                unify(ttree, aarg, barg);
-                unify(ttree, aret, bret);
+                unify(types, aarg, barg);
+                unify(types, aret, bret);
         }
 }
 
-static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
+static void coerce_to_fun_type(Type *types, uint32_t ifun, uint32_t iret)
 {
-        Type *types = ttree->types;
-        assert(ifun < icall);
+        assert(ifun < iret);
 
-        uint32_t iarg = ast_arg_idx(ttree->exprs, icall);
-        uint32_t iret = icall;
         // fputs("DBG: ", stderr);
         // print_typename(stderr, ttree->postfix, ifun);
         // fprintf(stderr, " <= new fun %d at from %d, %d\n", ifun, iarg, iret);
@@ -137,60 +132,62 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
         uint32_t old_iret;
         if (as_function(types, ifun, &old_iret)) {
                 uint32_t old_iarg = arg_from_ret(types, old_iret);
-                unify(ttree, old_iarg, iarg);
-                unify(ttree, old_iret, icall);
+                unify(types, old_iarg, iret - 1);
+                unify(types, old_iret, iret);
                 return;
         }
 
         set_function(types, ifun, iret);
 }
 
-static void bind_to_typevar(TypeTree *tree, uint32_t target, uint32_t tok)
+static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
 {
         DIE_IF(tok > MAX_TOKS, "Overbig token %u", tok);
-        Type *binding = tree->bindings[tok];
+        Type *binding = tg->bindings[tok];
         if (binding) {
-                set_prior(tree->types, target, binding - tree->types);
+                set_prior(tg->types, target, binding - tg->types);
         } else {
-                tree->bindings[tok] = tree->types + target;
+                tg->bindings[tok] = tg->types + target;
         }
 }
 
-static void solve_types(TypeTree *ttree)
+static void solve_types(TypeGraph *tg)
 {
-        const AstNode *exprs = ttree->exprs;
-        uint32_t size = ttree->size;
+        const AstNode *exprs = tg->exprs;
+        uint32_t size = tg->size;
 
         uint32_t val;
         for (int k = 0; k < size; k++)
                 switch (ast_unpack(exprs, k, &val)) {
                 case ANT_VAR:
-                        bind_to_typevar(ttree, k, val);
+                        bind_to_typevar(tg, k, val);
                         continue;
                 case ANT_CALL:
-                        coerce_to_fun_type(ttree, val, k);
+                        coerce_to_fun_type(tg->types, val, k);
                         continue;
                 }
 }
 
-static TypeTree *build_type_tree(const Ast *ast)
+static TypeGraph *build_type_graph(const Ast *ast)
 {
         uint32_t size;
         const AstNode *exprs = ast_postfix(ast, &size);
-        TypeTree *tree =
-            realloc_or_die(HERE, 0, sizeof(TypeTree) + sizeof(Type) * size);
-        *tree = (TypeTree){.exprs = exprs, .size = size};
+        TypeGraph *tg =
+            realloc_or_die(HERE, 0, sizeof(TypeGraph) + sizeof(Type) * size);
+        *tg = (TypeGraph){.exprs = exprs, .size = size};
+
+        Type *types = tg->types;
         for (uint32_t k = 0; k < size; k++) {
-                tree->types[k] = (Type){0};
+                types[k] = (Type){0};
         }
 
-        solve_types(tree);
+        solve_types(tg);
 
         for (uint32_t k = 0; k < size; k++) {
-                masterise(tree->types, k);
+                masterise(types, k);
         }
 
-        return tree;
+        return tg;
 }
 
 // ------------------------------------------------------------------
@@ -258,27 +255,27 @@ static void unparse_function_expansion(Unparser *unp, uint32_t idx)
         unparse_pop(unp);
 }
 
-static void unparse_type(FILE *oot, const TypeTree *tree, const Type *t)
+static void unparse_type(FILE *oot, const TypeGraph *tg, const Type *t)
 {
         Unparser unp = {
             .oot = oot,
-            .exprs = tree->exprs,
-            .types = tree->types,
+            .exprs = tg->exprs,
+            .types = tg->types,
         };
 
-        unparse_type_(&unp, t - tree->types);
+        unparse_type_(&unp, t - tg->types);
 }
 
 int act_type(FILE *oot, const Ast *ast)
 {
-        TypeTree *ttree = build_type_tree(ast);
+        TypeGraph *tg = build_type_graph(ast);
 
-        for (size_t k = 0; k < ttree->size; k++) {
-                unparse_type(oot, ttree, ttree->types + k);
+        for (size_t k = 0; k < tg->size; k++) {
+                unparse_type(oot, tg, tg->types + k);
                 fputc('\n', oot);
         }
 
-        free(ttree);
+        free(tg);
         fflush(oot);
         return 0;
 }
