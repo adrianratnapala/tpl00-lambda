@@ -182,7 +182,7 @@ static TypeTree *build_type_tree(const Ast *ast)
 
 typedef struct {
         FILE *oot;
-        const AstNode *exprs; // FIX: pick a name, exprs or postfix
+        const AstNode *exprs;
         const Type *types;
         uint32_t depth;
         uint32_t ntypes;
