@@ -19,7 +19,7 @@ struct Type {
 };
 
 typedef struct {
-        const AstNode *postfix;
+        const AstNode *exprs;
         uint32_t size;
         uint32_t pad;
         Type *bindings[MAX_TOKS];
@@ -113,7 +113,7 @@ static void coerce_to_fun_type(TypeTree *ttree, uint32_t ifun, uint32_t icall)
         Type *types = ttree->types;
         assert(ifun < icall);
 
-        uint32_t iarg = ast_arg_idx(ttree->postfix, icall);
+        uint32_t iarg = ast_arg_idx(ttree->exprs, icall);
         uint32_t iret = icall;
         // fputs("DBG: ", stderr);
         // print_typename(stderr, ttree->postfix, ifun);
@@ -143,7 +143,7 @@ static void bind_to_typevar(TypeTree *tree, uint32_t target, uint32_t tok)
 
 static void solve_types(TypeTree *ttree)
 {
-        const AstNode *exprs = ttree->postfix;
+        const AstNode *exprs = ttree->exprs;
         uint32_t size = ttree->size;
 
         uint32_t val;
@@ -161,10 +161,10 @@ static void solve_types(TypeTree *ttree)
 static TypeTree *build_type_tree(const Ast *ast)
 {
         uint32_t size;
-        const AstNode *postfix = ast_postfix(ast, &size);
+        const AstNode *exprs = ast_postfix(ast, &size);
         TypeTree *tree =
             realloc_or_die(HERE, 0, sizeof(TypeTree) + sizeof(Type) * size);
-        *tree = (TypeTree){.postfix = postfix, .size = size};
+        *tree = (TypeTree){.exprs = exprs, .size = size};
         for (uint32_t k = 0; k < size; k++) {
                 tree->types[k] = (Type){0};
         }
@@ -244,7 +244,7 @@ static void unparse_type(FILE *oot, const TypeTree *tree, const Type *t)
 {
         Unparser unp = {
             .oot = oot,
-            .exprs = tree->postfix, // FIX: pick a name, exprs or postfix.
+            .exprs = tree->exprs,
             .types = tree->types,
         };
 
@@ -254,6 +254,7 @@ static void unparse_type(FILE *oot, const TypeTree *tree, const Type *t)
 int act_type(FILE *oot, const Ast *ast)
 {
         TypeTree *ttree = build_type_tree(ast);
+
         for (size_t k = 0; k < ttree->size; k++) {
                 unparse_type(oot, ttree, ttree->types + k);
                 fputc('\n', oot);
