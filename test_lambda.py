@@ -353,3 +353,24 @@ def test_unify_recursive():
 
         assert A == '(A Ar)'
         assert X == '(A=(A Ar) Xr)'
+
+def test_unify_recursive_shallowly():
+        chain_of_types = "n (a b) (b c) (c d)"
+        closed_chain = chain_of_types + " (d a)"
+        types = run_type(closed_chain)
+
+        A = types['A']
+        B = types['B']
+        C = types['C']
+        D = types['D']
+        Ar = types['Ar']
+        Br = types['Br']
+        Cr = types['Cr']
+        Dr = types['Dr']
+
+        assert A == '(B=(C=(D=(A Dr) Cr) Br) Ar)'
+        assert B == '(C=(D=(A=(B Ar) Dr) Cr) Br)'
+        assert C == '(D=(A=(B=(C Br) Ar) Dr) Cr)'
+        assert D == '(A=(B=(C=(D Cr) Br) Ar) Dr)'
+
+
