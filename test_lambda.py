@@ -342,4 +342,14 @@ def test_unify_out_of_order():
         assert X == '(A={} Xr)'.format(A)
 
 
+def test_unify_recursive():
+        types = run_type("n (x a) (x b) (a b)")
 
+        assert 'B' not in types
+        A = types['A']
+        Ar = types['Ar']
+        X = types['X']
+        Xr = types['Xr']
+
+        assert A == '(A Ar)'
+        assert X == '(A=(A Ar) Xr)'
