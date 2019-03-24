@@ -207,35 +207,33 @@ static void unparse_pop(Unparser *unp)
         unp->depth = depth;
 }
 
-static void unparse_type_(Unparser *unp, const Type *t)
+static void unparse_type_(Unparser *unp, uint32_t idx)
 {
         const Type *types = unp->types;
         FILE *oot = unp->oot;
 
         // FIX: hide the delta.
-        int32_t delta = t->delta;
+        int32_t delta = types[idx].delta;
         if (delta < 0)
-                t += delta;
-        uint32_t idx = t - types;
+                idx += delta;
 
         print_typename(oot, unp->exprs, idx);
 
-        // FIX: this function should take indexes, not pointers.
         uint32_t iarg, iret;
-        if (!as_function(types, t - types, &iarg, &iret)) {
+        if (!as_function(types, idx, &iarg, &iret)) {
                 // if it's not a function there is no structure to expand.
                 return;
         }
 
-        if (!unparse_push(unp, t)) {
+        if (!unparse_push(unp, types + idx)) {
                 // Push failure means we have found recursion.
                 return;
         }
 
         fputs("=(", oot);
-        unparse_type_(unp, types + iarg);
+        unparse_type_(unp, iarg);
         fputc(' ', oot);
-        unparse_type_(unp, types + iret);
+        unparse_type_(unp, iret);
         fputc(')', oot);
         unparse_pop(unp);
 }
@@ -248,7 +246,7 @@ static void unparse_type(FILE *oot, const TypeTree *tree, const Type *t)
             .types = tree->types,
         };
 
-        unparse_type_(&unp, t);
+        unparse_type_(&unp, t - tree->types);
 }
 
 int act_type(FILE *oot, const Ast *ast)
