@@ -26,7 +26,16 @@ typedef struct {
         Type types[];
 } TypeTree;
 
-// FIX: find a better name.
+static uint32_t one_step_master(const Type *types, uint32_t idx)
+{
+        Type t = types[idx];
+        if (t.delta < 0) {
+                idx += t.delta;
+        }
+        assert(types[idx].delta >= 0);
+        return idx;
+}
+
 static uint32_t masterise(Type *types, uint32_t idx)
 {
         Type t = types[idx];
@@ -189,15 +198,20 @@ typedef struct {
         uint32_t stack[MAX_DEPTH];
 } Unparser;
 
-static bool unparse_push(Unparser *unp, uint32_t idx)
+typedef enum {
+        RECURSION_NOT_FOUND,
+        RECURSION_FOUND,
+} RecursionFound;
+
+static RecursionFound unparse_push(Unparser *unp, uint32_t idx)
 {
         uint32_t depth = unp->depth, k = depth;
         while (k--)
                 if (unp->stack[k] == idx)
-                        return false;
+                        return RECURSION_FOUND;
         unp->stack[depth] = idx;
         unp->depth = depth + 1;
-        return true;
+        return RECURSION_NOT_FOUND;
 }
 
 static void unparse_pop(Unparser *unp)
@@ -207,29 +221,27 @@ static void unparse_pop(Unparser *unp)
         unp->depth = depth;
 }
 
+static void unparse_function_expansion(Unparser *unp, uint32_t idx);
+
 static void unparse_type_(Unparser *unp, uint32_t idx)
 {
-        const Type *types = unp->types;
-        FILE *oot = unp->oot;
+        idx = one_step_master(unp->types, idx);
+        print_typename(unp->oot, unp->exprs, idx);
+        unparse_function_expansion(unp, idx);
+}
 
-        // FIX: hide the delta.
-        int32_t delta = types[idx].delta;
-        if (delta < 0)
-                idx += delta;
-
-        print_typename(oot, unp->exprs, idx);
-
+static void unparse_function_expansion(Unparser *unp, uint32_t idx)
+{
         uint32_t iarg, iret;
-        if (!as_function(types, idx, &iarg, &iret)) {
-                // if it's not a function there is no structure to expand.
+        if (!as_function(unp->types, idx, &iarg, &iret)) {
                 return;
         }
 
-        if (!unparse_push(unp, idx)) {
-                // Push failure means we have found recursion.
+        if (unparse_push(unp, idx) == RECURSION_FOUND) {
                 return;
         }
 
+        FILE *oot = unp->oot;
         fputs("=(", oot);
         unparse_type_(unp, iarg);
         fputc(' ', oot);
