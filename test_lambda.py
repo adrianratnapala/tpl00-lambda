@@ -169,116 +169,112 @@ def test_bad_print_and_test_source_read():
 def xname(request):
         return request.param
 
-def run_type(src):
+
+from collections import namedtuple
+
+TN = namedtuple('TN', ['N', 'T'])
+
+def types(src):
         out, err = run_lambda(src, args={
                 "type": True,
         })
         assert err == None
-        types = {}
         lines = out.strip().split('\n')
-        for l in (l.strip().split('=', 1) for l in lines):
-                k = l[0]
-                v = None
-                if len(l) > 1:
-                        v = l[1]
-                print('run_type: ', l, k ,v)
-                assert types.get(k, v) == v
-                types[k] = v
-        return types
+        splits = (l.strip().split('=', 1) for l in lines)
+        kv = [TN(*kv) if len(kv) == 2 else TN(kv[0], None) for kv in splits]
+
+        found = {}
+        for k, v in kv:
+                print('run_type: ', k ,v)
+                assert found.get(k, v) == v
+                found[k] = v
+        return kv
+
+def run_type(src):
+        # FIX: get rid of this.
+        return dict(types(src))
 
 def test_type_trivial_x(xname):
         xtype = xname.upper()
-        assert run_type(xname) == {xtype: None}
+        assert dict(types(xname)) == {xtype: None}
 
 def test_type_call():
-        assert run_type("(x y)") == dict(
-                X = "(Y Xr)",
-                Y = None,
-                Xr = None,
-        )
+        X, Y, Xr =  types("(x y)")
+        assert X == ("X", "(Y Xr)")
+        assert Y == ("Y", None)
+        assert Xr == ("Xr", None)
 
 def test_type_call_recursive():
-        assert run_type("(x x)") == dict(
-                X = "(X Xr)",
-                Xr = None,
-        )
+        X, _, Xr = types("(x x)")
+        assert X == ("X", "(X Xr)")
+        assert Xr == ("Xr", None)
 
 def test_deepish_type():
-        types = run_type("((a b) c)")
-        A = types['A']
-        B = types['B']
-        C = types['C']
-        Ar = types['Ar']
-        Arr = types['Arr']
-        assert Arr == None
-        assert B == None
-        assert C == None
-        assert Ar == '(C Arr)'
-        assert A == '(B Ar={})'.format(Ar)
+        A, B, Ar, C, Arr = types("((a b) c)")
+        assert Arr == ('Arr', None)
+        assert B == ('B', None)
+        assert C == ('C', None)
+        assert Ar == ('Ar', '(C Arr)')
+        assert A == ('A', '(B Ar={})'.format(Ar.T))
 
 
 def test_deepish_recursive_type():
-        types=run_type("((a b) a)")
-        A = types['A']
-        B = types['B']
-        Ar = types['Ar']
-        Arr = types['Arr']
-        assert Arr == None
-        assert B == None
-        assert Ar == "(A=(B Ar) Arr)"
-        assert A == "(B Ar={})".format(Ar.replace("=(B Ar)", ""))
+        A, B, Ar, _A, Arr = types("((a b) a)")
+        assert Arr == ('Arr', None)
+        assert B == ('B', None)
+        assert Ar == ('Ar', "(A=(B Ar) Arr)")
+
+        assert A.N == 'A'
+        assert A.T == "(B Ar={})".format(Ar.T.replace("=(B Ar)", ""))
+        assert _A == A
 
 def test_deeper_recursive_type():
-        types =  run_type("((((a b) c) d) a)")
-        A = types['A']
-        B = types['B']
-        C = types['C']
-        D = types['D']
-        Ar = types['Ar']
-        Arr = types['Arr']
-        Arrr = types['Arrr']
-        Arrrr = types['Arrrr']
+        A, B, Ar, C, Arr, D, Arrr, _A, Arrrr = types("((((a b) c) d) a)")
 
-        assert D == None
-        assert B == None
-        assert C == None
-        assert Arrrr == None
+        assert D == ("D", None)
+        assert B == ("B", None)
+        assert C == ("C", None)
+        assert Arrrr == ("Arrrr", None)
 
-        assert A == "(B Ar=(C Arr=(D Arrr=(A Arrrr))))"
-        assert Arrr == "(A={} Arrrr)".format(A.replace('=(A Arrrr)', ''))
-        assert Arr == "(D Arrr={})".format(Arrr.replace('=(D Arrr)', ''))
-        assert Ar == "(C Arr={})".format(Arr.replace('=(C Arr)', ''))
+        assert A.N == 'A'
+        assert Ar.N == 'Ar'
+        assert Arr.N == 'Arr'
+        assert Arrr.N == 'Arrr'
+
+        assert A.T == '(B Ar=(C Arr=(D Arrr=(A Arrrr))))'
+        assert Ar.T == "(C Arr={})".format(Arr.T.replace('=(C Arr)', ''))
+        assert Arr.T == "(D Arrr={})".format(Arrr.T.replace('=(D Arrr)', ''))
+        assert Arrr.T == '(A={} Arrrr)'.format(A.T.replace('=(A Arrrr)', ''))
 
 def test_unify_nonrecursive_functions_shallowly():
         # A and B don't have to be unified either.
         #                   0  1 234  5 678
-        types = run_type("n (a x) (y a) (y b) (b x)")
-        print('types=', types)
-        X = types['X']
-        Y = types['Y']
-        N = types['N']
-        A = types['A']
-        Ar = types['Ar']
-        Yr = types['Yr']
-        Nr = types['Nr']
-        Nrr = types['Nrr']
-        Nrrr = types['Nrrr']
-        Nrrrr = types['Nrrrr']
+        N,\
+        A, X, Ar, Nr, \
+        Y, A2, Yr, Nrr, \
+        Y2, B, Yr2, Nrrr, \
+        B2, X2, Br, Nrrrr = types("n (a x) (y a) (y b) (b x)")
 
-        assert 'B' not in types.keys()
+        print("N=", N)
 
-        assert Ar == None
-        assert Yr == None
-        assert X == None
-        assert Nrrrr == None
-        assert Yr == None
+        assert B == A
+        assert A2 == A
+        assert B2 == B
+        assert Y2 == Y
+        assert Yr2 == Yr
 
-        assert A == '(X Ar)'
-        assert Y == '(A={} Yr)'.format(A)
-        assert Nrrr == '(Ar Nrrrr)'
-        assert Nrr == '(Yr Nrrr={})'.format(Nrrr)
-        assert Nr == '(Yr Nrr={})'.format(Nrr)
-        assert N == '(Ar Nr={})'.format(Nr)
+        assert Ar == ("Ar", None)
+        assert Yr == ("Yr", None)
+        assert X == ("X", None)
+        assert Nrrrr == ("Nrrrr", None)
+        assert Yr == ("Yr", None)
+
+        assert A == ("A", '(X Ar)')
+        assert Y == ("Y", '(A={} Yr)'.format(A.T))
+        assert Nrrr == ("Nrrr", '(Ar Nrrrr)')
+        assert Nrr == ("Nrr", '(Yr Nrrr={})'.format(Nrrr.T))
+        assert Nr == ("Nr", '(Yr Nrr={})'.format(Nrr.T))
+        assert N == ("N", '(Ar Nr={})'.format(Nr.T))
 
 
 def test_unify_nonrecursive_functions_deeply():
