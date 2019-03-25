@@ -108,8 +108,8 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
         if (!a_is_fun && b_is_fun) {
                 replace_with_fun_returning(types, ia, bret);
         }
-        replace_with_prior_link(types, ib, ia);
 
+        replace_with_prior_link(types, ib, ia);
         if (a_is_fun && b_is_fun) {
                 uint32_t aarg = arg_from_ret(types, aret);
                 uint32_t barg = arg_from_ret(types, bret);

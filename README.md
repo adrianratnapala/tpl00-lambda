@@ -320,7 +320,7 @@ nodes are between the root at the current point.
 ### How to type
 
 The typing algorithm is straightforward but not trivial.  To build a graph of
-types we scan the expression tree in postfix order assigning a new type to each
+types we scan the expression tree in postfix order, assigning a new type to each
 expression.  The types never really change, but occasionally we find that
 previously distinct types are actually, they have to be unified.
 
@@ -415,4 +415,47 @@ If `ifun` was already a function, it does not change.  However we have now
 discovered that the newly discovered ret- and arg- are references to old ones.
 
 `unify()` is the thing that *recursively* replaces one type with prior-links to
-another one.
+another one.  It goes:
+
+
+        static void unify(Type *types, uint32_t ia, uint32_t ib)
+        {
+                ia = relink_to_first(types, ia);
+                ib = relink_to_first(types, ib);
+                if (ia == ib)
+                        return;
+
+                uint32_t aret, bret;
+                bool a_is_fun = as_fun_type(types, ia, &aret);
+                bool b_is_fun = as_fun_type(types, ib, &bret);
+
+                if (!a_is_fun && b_is_fun) {
+                        replace_with_fun_returning(types, ia, bret);
+                }
+
+                replace_with_prior_link(types, ib, ia);
+                if (a_is_fun && b_is_fun) {
+                        uint32_t aarg = arg_from_ret(types, aret);
+                        uint32_t barg = arg_from_ret(types, bret);
+                        unify(types, aarg, barg);
+                        unify(types, aret, bret);
+                }
+        }
+
+
+There are two tricksy things here.  One is the check:
+
+                if (!a_is_fun && b_is_fun) {
+                        replace_with_fun_returning(types, ia, bret);
+                }
+
+The reason for this is that `unify()` always turns `B` into a prior-link, never
+`A`.  So if `b` had structure, and `A` did not, we copy that structure first
+before linking `b`.
+
+The next trick is to make the link *before* recursively unify()ing the
+substructure.  This prevents infinite looping, if `unify()` returns to the same
+point in the type-graph, the `ia == ib` check at the top will let it terminate.
+Setting up the link is effectively marking the node as visited in a depth-first
+graph traversal.
+
