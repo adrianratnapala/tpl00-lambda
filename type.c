@@ -126,7 +126,8 @@ static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
         uint32_t old_iret;
         if (as_fun_type(types, ifun, &old_iret)) {
                 uint32_t old_iarg = arg_from_ret(types, old_iret);
-                unify(types, old_iarg, iret - 1);
+                uint32_t iarg = arg_from_ret(types, iret);
+                unify(types, old_iarg, iarg);
                 unify(types, old_iret, iret);
                 return;
         }
