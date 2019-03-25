@@ -94,13 +94,22 @@ static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *ret)
         return true;
 }
 
+// FIX: give meanigful names.
+static void replace_subgraph_with_links(Type *types, uint32_t ib, uint32_t ia);
+
 static void unify(Type *types, uint32_t ia, uint32_t ib)
 {
         ia = relink_to_first(types, ia);
         ib = relink_to_first(types, ib);
-        if (ia == ib)
-                return;
+        if(ia < ib)
+                return replace_subgraph_with_links(types, ib, ia);
+        if(ib < ia)
+                return replace_subgraph_with_links(types, ia, ib);
+}
 
+// FIX: give meanigful names.
+static void replace_subgraph_with_links(Type *types, uint32_t ib, uint32_t ia)
+{
         uint32_t aret, bret;
         bool a_is_fun = as_fun_type(types, ia, &aret);
         bool b_is_fun = as_fun_type(types, ib, &bret);

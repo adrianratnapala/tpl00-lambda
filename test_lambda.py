@@ -372,4 +372,10 @@ def test_unify_shallow_but_long_recursion():
         assert C == '(D=(A=(B=(C Br) Ar) Dr) Cr)'
         assert D == '(A=(B=(C=(D Cr) Br) Ar) Dr)'
 
-
+def test_out_of_order_after_prior_links():
+        prog = "n (x a)"  # A is some type
+        prog += " (b p)"  # B is a function type
+        prog += " (c q)"  # C is too
+        prog += " (x c)"  # A == C
+        prog += " (x b)"  # B == A
+        print(types(prog))
