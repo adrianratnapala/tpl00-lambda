@@ -255,4 +255,11 @@ Thus:
         X=(X Xr)   # The arg x, has the same type
         Xr         # functions of type X return values of type Xr.
 
+### How to Type
+
+The typing algorithm is straightforward non-trivial.  To build a graph of types
+we scan the expression tree in postfix order assigning a new type to each
+expression.  The types never really change, but occasionally we find that
+previously distinct types are actually, they have to be unified.
+
 
