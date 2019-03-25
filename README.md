@@ -255,11 +255,69 @@ Thus:
         X=(X Xr)   # The arg x, has the same type
         Xr         # functions of type X return values of type Xr.
 
-### How to Type
+### The type graph
+
+We want to build a digraph of types.  There is a vertex for each expression in
+the Ast.  Only the first vertex for a given type is a "real" type, all others
+are references to it.  If a real type is a fun-type, then it has edges pointing
+(perhaps indirectly) to its argument and return types.  Thus we have three
+kinds of edge:
+
+* A *prior link* means the source vertex is a reference to the destination
+  (which might itself be a reference).
+
+* A *arg link* is an edge from a fun-type to the type of its argument.
+
+* A *ret link* is an edge from a fun-type to the type of its return value.
+
+As ever, this structure is best captured by the serialisation code:
+
+
+        static void unparse_type_(Unparser *unp, uint32_t idx)
+        {
+                idx = first_occurrence(unp->types, idx);
+                print_typename(unp->oot, unp->exprs, idx);
+                unparse_fun_expansion(unp, idx);
+        }
+
+        static void unparse_fun_expansion(Unparser *unp, uint32_t idx)
+        {
+                uint32_t iret;
+                if (!as_fun_type(unp->types, idx, &iret)) {
+                        return;
+                }
+
+                if (unparse_push(unp, idx) == RECURSION_FOUND) {
+                        return;
+                }
+
+                uint32_t iarg = arg_from_ret(unp->types, iret);
+                FILE *oot = unp->oot;
+                fputs("=(", oot);
+                unparse_type_(unp, iarg);
+                fputc(' ', oot);
+                unparse_type_(unp, iret);
+                fputc(')', oot);
+                unparse_pop(unp);
+        }
+
+
+So this is a depth-first traversal of the type graph.
+
+* `first_occurrence` chases prior links.  (In fact assert()s that a single
+  hop is enough.  The graph is post-processed to collapse longer chains).
+
+* `as_fun_type` returns true if it handed a fun-type, in which case it
+  chases the ret-link.
+
+* `arg_from_ret` chases the arg-link using satanic invariants of the graph
+  representation to derive the arg type from the ret type.
+
+This is a depth-first traversal of the graph.  The required stack is really the
+CPU-stack, `unparse_push` and `unparse_pop` are really there to remember which
+nodes are between the root at the current point.
 
 The typing algorithm is straightforward non-trivial.  To build a graph of types
 we scan the expression tree in postfix order assigning a new type to each
 expression.  The types never really change, but occasionally we find that
 previously distinct types are actually, they have to be unified.
-
-
