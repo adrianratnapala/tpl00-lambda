@@ -18,6 +18,22 @@ struct Type {
         int32_t delta;
 };
 
+static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
+{
+        int k = 0;
+        uint32_t val = idx;
+        while (ANT_CALL == ast_unpack(exprs, val, &val)) {
+                k++;
+        }
+
+        fputc(val + 'A', oot);
+        while (k--) {
+                fputc('r', oot);
+        }
+}
+
+// -----------------------------------------------------------------------------
+
 typedef struct {
         const AstNode *exprs;
         uint32_t size;
@@ -54,20 +70,6 @@ static void replace_with_prior_link(Type *types, uint32_t idx, int32_t prior)
 {
         assert(prior < idx);
         types[idx] = (Type){.delta = prior - idx};
-}
-
-static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
-{
-        int k = 0;
-        uint32_t val = idx;
-        while (ANT_CALL == ast_unpack(exprs, val, &val)) {
-                k++;
-        }
-
-        fputc(val + 'A', oot);
-        while (k--) {
-                fputc('r', oot);
-        }
 }
 
 static void replace_with_function(Type *types, uint32_t ifun, uint32_t iret)
