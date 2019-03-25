@@ -26,7 +26,7 @@ typedef struct {
         Type types[];
 } TypeGraph;
 
-static uint32_t one_step_master(const Type *types, uint32_t idx)
+static uint32_t first_occurrence(const Type *types, uint32_t idx)
 {
         Type t = types[idx];
         if (t.delta < 0) {
@@ -218,7 +218,7 @@ static void unparse_function_expansion(Unparser *unp, uint32_t idx);
 
 static void unparse_type_(Unparser *unp, uint32_t idx)
 {
-        idx = one_step_master(unp->types, idx);
+        idx = first_occurrence(unp->types, idx);
         print_typename(unp->oot, unp->exprs, idx);
         unparse_function_expansion(unp, idx);
 }
