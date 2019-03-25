@@ -70,7 +70,7 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
         }
 }
 
-static void set_function(Type *types, uint32_t ifun, uint32_t iret)
+static void replace_with_function(Type *types, uint32_t ifun, uint32_t iret)
 {
         types[ifun].delta = iret - ifun;
 }
@@ -104,7 +104,7 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
 
         if (!a_is_fun && b_is_fun) {
                 // Copy the contents of B into A, so that we can discard B.
-                set_function(types, ia, bret);
+                replace_with_function(types, ia, bret);
         }
         replace_with_prior_link(types, ib, ia);
 
@@ -129,7 +129,7 @@ static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
                 return;
         }
 
-        set_function(types, ifun, iret);
+        replace_with_function(types, ifun, iret);
 }
 
 static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
