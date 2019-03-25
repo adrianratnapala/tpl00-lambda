@@ -307,22 +307,22 @@ So this is a depth-first traversal of the type graph.
 * `first_occurrence` chases prior links.  (In fact assert()s that a single
   hop is enough.  The graph is post-processed to collapse longer chains).
 
-* `as_fun_type` returns true if it handed a fun-type, in which case it
+* `as_fun_type` returns true if it is handed a fun-type, in which case it
   chases the ret-link.
 
 * `arg_from_ret` chases the arg-link using satanic invariants of the graph
   representation to derive the arg type from the ret type.
 
 This is a depth-first traversal of the graph.  The required stack is really the
-CPU-stack, `unparse_push` and `unparse_pop` are really there to remember which
-nodes are between the root at the current point.
+CPU-stack, `unparse_push` and `unparse_pop` are there to remember which nodes
+are between the root at the current point.
 
 ### How to type
 
 The typing algorithm is straightforward but not trivial.  To build a graph of
-types we scan the expression tree in postfix order, assigning a new type to each
-expression.  The types never really change, but occasionally we find that
-previously distinct types are actually, they have to be unified.
+types, we scan the expression tree in postfix order, assigning a new type to
+each expression.  The types never really change, but occasionally we find that
+previously distinct types are actually the same; they have to be *unified*.
 
 The scan is just
 
@@ -335,17 +335,17 @@ The scan is just
                 }
 
 
-This produces a valid type-graph.  But it is sub-optimal because there can be
-chains of multiple prior-links.  So we collapse them with a utility function
-that we need anyway:
+This produces a valid type-graph.  But the result is sub-optimal because there
+can be chains of multiple prior-links.  So we then collapse them with a utility
+function that we need anyway:
 
                 for (uint32_t k = 0; k < size; k++) {
                         relink_to_first(types, k);
                 }
 
 
-
-The type inference is more interesting, but it begins with a dumb-old switch:
+The inference of individual types is more interesting, but it begins with a
+dumb-old switch:
 
         static void infer_new_type(TypeGraph *tg, uint32_t idx)
         {
@@ -362,7 +362,7 @@ The type inference is more interesting, but it begins with a dumb-old switch:
                 DIE_LCOV_EXCL_LINE("Typing found expr %u with bad tag %d", idx, tag);
         }
 
-`bind_to_typevar` is straightforward.  The `ANT_CALL` case is trickier in part
+`bind_to_typevar` is straightforward.  The `ANT_CALL` case is trickier, in part
 because the type-graph and the Ast have different shapes.  In the Ast, a
 function call is:
 
@@ -385,8 +385,7 @@ But the corresponding types link as:
 
 So we `(val, idx)` in `infer_new_type` becomes `(ifun, iret)` in
 `coerce_to_callee`.  This means `iret` is the new type (implicitly a
-type-variable) while `ifun` is a previously discovered type which can be a
-type-var or a fun-type.
+type-variable) while `ifun` is a previously discovered (possibly complex) type.
 
 Thus `coerce_to_callee` is:
 
@@ -409,14 +408,14 @@ Thus `coerce_to_callee` is:
 
 
 If `ifun` was simply a type-var, all we do is expand it out using the newly
-discovered `iret` (remember the arg-type can be inferred from this).
+discovered `iret` (remember, the arg-type can be inferred from this).
 
 If `ifun` was already a function, it does not change.  However we have now
-discovered that the newly discovered ret- and arg- are references to old ones.
+discovered that the newly discovered ret- and arg- are references to old ones
+so we call `unify()`  to *recursively* replace the new types with prior-links to
+older ones.
 
-`unify()` is the thing that *recursively* replaces one type with prior-links to
-another one.  It goes:
-
+FIX: can we *prove* that ia <= ib, especially after chasing the prior links?
 
         static void unify(Type *types, uint32_t ia, uint32_t ib)
         {
@@ -450,7 +449,7 @@ There are two tricksy things here.  One is the check:
                 }
 
 The reason for this is that `unify()` always turns `B` into a prior-link, never
-`A`.  So if `b` had structure, and `A` did not, we copy that structure first
+`A`.  So if `b` had structure, and `A` did not, we copy that structure first,
 before linking `b`.
 
 The next trick is to make the link *before* recursively unify()ing the
