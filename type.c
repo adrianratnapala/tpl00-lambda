@@ -94,37 +94,36 @@ static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *ret)
         return true;
 }
 
-// FIX: give meanigful names.
-static void replace_subgraph_with_links(Type *types, uint32_t ib, uint32_t ia);
+static void unify(Type *types, uint32_t ia, uint32_t ib);
+
+static void replace_subgraph_with_links(Type *types, uint32_t dest,
+                                        uint32_t repl)
+{
+        uint32_t dest_ret, repl_ret;
+        bool dest_is_fun = as_fun_type(types, dest, &dest_ret);
+        bool repl_is_fun = as_fun_type(types, repl, &repl_ret);
+
+        if (!repl_is_fun && dest_is_fun) {
+                replace_with_fun_returning(types, repl, dest_ret);
+        }
+
+        replace_with_prior_link(types, dest, repl);
+        if (repl_is_fun && dest_is_fun) {
+                uint32_t repl_arg = arg_from_ret(types, repl_ret);
+                uint32_t dest_arg = arg_from_ret(types, dest_ret);
+                unify(types, repl_arg, dest_arg);
+                unify(types, repl_ret, dest_ret);
+        }
+}
 
 static void unify(Type *types, uint32_t ia, uint32_t ib)
 {
         ia = relink_to_first(types, ia);
         ib = relink_to_first(types, ib);
-        if(ia < ib)
+        if (ia < ib)
                 return replace_subgraph_with_links(types, ib, ia);
-        if(ib < ia)
+        if (ib < ia)
                 return replace_subgraph_with_links(types, ia, ib);
-}
-
-// FIX: give meanigful names.
-static void replace_subgraph_with_links(Type *types, uint32_t ib, uint32_t ia)
-{
-        uint32_t aret, bret;
-        bool a_is_fun = as_fun_type(types, ia, &aret);
-        bool b_is_fun = as_fun_type(types, ib, &bret);
-
-        if (!a_is_fun && b_is_fun) {
-                replace_with_fun_returning(types, ia, bret);
-        }
-
-        replace_with_prior_link(types, ib, ia);
-        if (a_is_fun && b_is_fun) {
-                uint32_t aarg = arg_from_ret(types, aret);
-                uint32_t barg = arg_from_ret(types, bret);
-                unify(types, aarg, barg);
-                unify(types, aret, bret);
-        }
 }
 
 static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)

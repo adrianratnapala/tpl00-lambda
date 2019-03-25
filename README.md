@@ -412,49 +412,57 @@ discovered `iret` (remember, the arg-type can be inferred from this).
 
 If `ifun` was already a function, it does not change.  However we have now
 discovered that the newly discovered ret- and arg- are references to old ones
-so we call `unify()`  to *recursively* replace the new types with prior-links to
-older ones.
+so we call `unify()`  to *recursively* merge two types, replacing previously
+independent types with prior-links as necessary.
 
-FIX: can we *prove* that ia <= ib, especially after chasing the prior links?
+In our implementation, `unify()` itself is just a wrapper:
 
         static void unify(Type *types, uint32_t ia, uint32_t ib)
         {
                 ia = relink_to_first(types, ia);
                 ib = relink_to_first(types, ib);
-                if (ia == ib)
-                        return;
+                if (ia < ib)
+                        return replace_subgraph_with_links(types, ib, ia);
+                if (ib < ia)
+                        return replace_subgraph_with_links(types, ia, ib);
+        }
 
-                uint32_t aret, bret;
-                bool a_is_fun = as_fun_type(types, ia, &aret);
-                bool b_is_fun = as_fun_type(types, ib, &bret);
+It makes sure that the newer type gets replaced with a link into the older type
+and is also a no-op if the two types are already the same.  The relinking is:
 
-                if (!a_is_fun && b_is_fun) {
-                        replace_with_fun_returning(types, ia, bret);
+        static void replace_subgraph_with_links(Type *types, uint32_t dest,
+                                                uint32_t repl)
+        {
+                assert(dest > repl);
+                uint32_t dest_ret, repl_ret;
+                bool dest_is_fun = as_fun_type(types, dest, &dest_ret);
+                bool repl_is_fun = as_fun_type(types, repl, &repl_ret);
+
+                if (!repl_is_fun && dest_is_fun) {
+                        replace_with_fun_returning(types, repl, dest_ret);
                 }
 
-                replace_with_prior_link(types, ib, ia);
-                if (a_is_fun && b_is_fun) {
-                        uint32_t aarg = arg_from_ret(types, aret);
-                        uint32_t barg = arg_from_ret(types, bret);
-                        unify(types, aarg, barg);
-                        unify(types, aret, bret);
+                replace_with_prior_link(types, dest, repl);
+                if (repl_is_fun && dest_is_fun) {
+                        uint32_t repl_arg = arg_from_ret(types, repl_ret);
+                        uint32_t dest_arg = arg_from_ret(types, dest_ret);
+                        unify(types, repl_arg, dest_arg);
+                        unify(types, repl_ret, dest_ret);
                 }
         }
 
 
 There are two tricksy things here.  One is the check:
 
-                if (!a_is_fun && b_is_fun) {
-                        replace_with_fun_returning(types, ia, bret);
+                if (!repl_is_fun && dest_is_fun) {
+                        replace_with_fun_returning(types, repl, dest_ret);
                 }
 
-The reason for this is that `unify()` always turns `B` into a prior-link, never
-`A`.  So if `b` had structure, and `A` did not, we copy that structure first,
-before linking `b`.
+The ordering requirement means we always preserve `repl` and turn `dest` into a
+link.  But if `dest` had structure, and `repl` did not, we copy that structure
+before relinking.
 
 The next trick is to make the link *before* recursively unify()ing the
-substructure.  This prevents infinite looping, if `unify()` returns to the same
-point in the type-graph, the `ia == ib` check at the top will let it terminate.
-Setting up the link is effectively marking the node as visited in a depth-first
-graph traversal.
+substructure.  This prevents infinite looping: if we get to thesame point in
+the type-graph, unify will be a no-op because `ia == ib`.
 
