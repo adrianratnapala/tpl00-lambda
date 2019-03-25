@@ -72,7 +72,8 @@ static void replace_with_prior_link(Type *types, uint32_t idx, int32_t prior)
         types[idx] = (Type){.delta = prior - idx};
 }
 
-static void replace_with_fun_type(Type *types, uint32_t ifun, uint32_t iret)
+static void replace_with_fun_returning(Type *types, uint32_t ifun,
+                                       uint32_t iret)
 {
         types[ifun].delta = iret - ifun;
 }
@@ -105,8 +106,7 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
         bool b_is_fun = as_fun_type(types, ib, &bret);
 
         if (!a_is_fun && b_is_fun) {
-                // Copy the contents of B into A, so that we can discard B.
-                replace_with_fun_type(types, ia, bret);
+                replace_with_fun_returning(types, ia, bret);
         }
         replace_with_prior_link(types, ib, ia);
 
@@ -131,7 +131,7 @@ static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
                 return;
         }
 
-        replace_with_fun_type(types, ifun, iret);
+        replace_with_fun_returning(types, ifun, iret);
 }
 
 static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
