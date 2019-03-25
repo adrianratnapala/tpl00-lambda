@@ -220,12 +220,10 @@ is at
 
 ## Typing
 
-FIX: In the code use `first` and `prior` instead of `master`.
-
-Even though we don't even do any computation yet, it's possible to define a
-meaningful and type system.  Or language only has variables, but if one of them
-is used as a function, then we know it is a function, and so-on.  With the
-`--type` argument, `lambda` will infer print out such types.  For example:
+Even though we don't even do any computation yet, we can define a meaningful
+type system.  Or language only has variables, but if one of them is used, we
+know is a function of something, this is type information.  With the `--type`
+argument, `lambda` will infer print out such types.  For example:
 
         >>$ b/lambda --type
         >>> x y
@@ -237,18 +235,17 @@ is used as a function, then we know it is a function, and so-on.  With the
 What we see here is that all types have names, derived from the first value
 found of that type:
 
-* If a variable, `x` its type is just `X`.
-* If the return value of function of type `F`, is `Fr`.
+* If the value is a variable, `x` its type is just `X`.  This is a
+  type-variable.
+* If the value is a call of a function of type `F`, the return-type is `Fr`.
 
-Function types have more structure, their full serialisation is:
+The type of a function  is called a "fun-type".  Fun-types have
+more structure than type-variables, their full serialisation is:
 
         FuncName=(ArgType RetType)
 
-Where each of `ArgType` and `RetType` will also have its own `=(...)`
-expansion, unless
-
-* No value of that type was ever called as a function (i.e. it's a variable type).
-* It is a recursive invocation of the overall type.
+Where if either of `ArgType` and `RetType` is fun-type it also have its own
+`=(...)` expansion, unless it is a recursive invocation of the overall type.
 
 Thus:
 
