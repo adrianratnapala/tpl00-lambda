@@ -317,7 +317,102 @@ This is a depth-first traversal of the graph.  The required stack is really the
 CPU-stack, `unparse_push` and `unparse_pop` are really there to remember which
 nodes are between the root at the current point.
 
-The typing algorithm is straightforward non-trivial.  To build a graph of types
-we scan the expression tree in postfix order assigning a new type to each
+### How to type
+
+The typing algorithm is straightforward but not trivial.  To build a graph of
+types we scan the expression tree in postfix order assigning a new type to each
 expression.  The types never really change, but occasionally we find that
 previously distinct types are actually, they have to be unified.
+
+The scan is just
+
+                .
+                . // allocate memory for the type graph
+                .
+                for (uint32_t k = 0; k < size; k++) {
+                        types[k] = (Type){0};
+                        infer_new_type(tg, k);
+                }
+
+
+This produces a valid type-graph.  But it is sub-optimal because there can be
+chains of multiple prior-links.  So we collapse them with a utility function
+that we need anyway:
+
+                for (uint32_t k = 0; k < size; k++) {
+                        relink_to_first(types, k);
+                }
+
+
+
+The type inference is more interesting, but it begins with a dumb-old switch:
+
+        static void infer_new_type(TypeGraph *tg, uint32_t idx)
+        {
+                uint32_t val;
+                AstNodeType tag = ast_unpack(tg->exprs, idx, &val);
+                switch (tag) {
+                case ANT_VAR:
+                        bind_to_typevar(tg, idx, val);
+                        return;
+                case ANT_CALL:
+                        coerce_callee(tg->types, val, idx);
+                        return;
+                }
+                DIE_LCOV_EXCL_LINE("Typing found expr %u with bad tag %d", idx, tag);
+        }
+
+`bind_to_typevar` is straightforward.  The `ANT_CALL` case is trickier in part
+because the type-graph and the Ast have different shapes.  In the Ast, a
+function call is:
+
+            ret-val
+           /       \
+          /         \
+         V           V
+      fun-val     arg-val
+
+
+But the corresponding types link as:
+
+
+        ret-type
+           ^
+          /
+         /
+      fun-type ----> arg-type
+
+
+So we `(val, idx)` in `infer_new_type` becomes `(ifun, iret)` in
+`coerce_to_callee`.  This means `iret` is the new type (implicitly a
+type-variable) while `ifun` is a previously discovered type which can be a
+type-var or a fun-type.
+
+Thus `coerce_to_callee` is:
+
+        static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
+        {
+                assert(ifun < iret);
+
+                ifun = relink_to_first(types, ifun);
+                uint32_t old_iret;
+                if (!as_fun_type(types, ifun, &old_iret)) {
+                        replace_with_fun_returning(types, ifun, iret);
+                        return;
+                }
+
+                uint32_t old_iarg = arg_from_ret(types, old_iret);
+                uint32_t iarg = arg_from_ret(types, iret);
+                unify(types, old_iarg, iarg);
+                unify(types, old_iret, iret);
+        }
+
+
+If `ifun` was simply a type-var, all we do is expand it out using the newly
+discovered `iret` (remember the arg-type can be inferred from this).
+
+If `ifun` was already a function, it does not change.  However we have now
+discovered that the newly discovered ret- and arg- are references to old ones.
+
+`unify()` is the thing that *recursively* replaces one type with prior-links to
+another one.

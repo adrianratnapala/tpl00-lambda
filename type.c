@@ -124,15 +124,15 @@ static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
 
         ifun = relink_to_first(types, ifun);
         uint32_t old_iret;
-        if (as_fun_type(types, ifun, &old_iret)) {
-                uint32_t old_iarg = arg_from_ret(types, old_iret);
-                uint32_t iarg = arg_from_ret(types, iret);
-                unify(types, old_iarg, iarg);
-                unify(types, old_iret, iret);
+        if (!as_fun_type(types, ifun, &old_iret)) {
+                replace_with_fun_returning(types, ifun, iret);
                 return;
         }
 
-        replace_with_fun_returning(types, ifun, iret);
+        uint32_t old_iarg = arg_from_ret(types, old_iret);
+        uint32_t iarg = arg_from_ret(types, iret);
+        unify(types, old_iarg, iarg);
+        unify(types, old_iret, iret);
 }
 
 static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
