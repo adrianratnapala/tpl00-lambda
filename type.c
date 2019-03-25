@@ -50,11 +50,10 @@ static uint32_t relink_to_first(Type *types, uint32_t idx)
         return first;
 }
 
-static void set_prior(Type *types, uint32_t target, int32_t prior)
+static void replace_with_prior_link(Type *types, uint32_t idx, int32_t prior)
 {
-        // FIX? so should we get rid of he unused arg.
-        assert(prior < target);
-        types[target] = (Type){.delta = prior - target};
+        assert(prior < idx);
+        types[idx] = (Type){.delta = prior - idx};
 }
 
 static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
@@ -107,7 +106,7 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
                 // Copy the contents of B into A, so that we can discard B.
                 set_function(types, ia, bret);
         }
-        set_prior(types, ib, ia);
+        replace_with_prior_link(types, ib, ia);
 
         if (a_is_fun && b_is_fun) {
                 uint32_t aarg = arg_from_ret(types, aret);
@@ -138,7 +137,7 @@ static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
         DIE_IF(tok > MAX_TOKS, "Overbig token %u", tok);
         Type *binding = tg->bindings[tok];
         if (binding) {
-                set_prior(tg->types, target, binding - tg->types);
+                replace_with_prior_link(tg->types, target, binding - tg->types);
         } else {
                 tg->bindings[tok] = tg->types + target;
         }
