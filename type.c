@@ -72,7 +72,7 @@ static void replace_with_prior_link(Type *types, uint32_t idx, int32_t prior)
         types[idx] = (Type){.delta = prior - idx};
 }
 
-static void replace_with_function(Type *types, uint32_t ifun, uint32_t iret)
+static void replace_with_fun_type(Type *types, uint32_t ifun, uint32_t iret)
 {
         types[ifun].delta = iret - ifun;
 }
@@ -82,7 +82,7 @@ static uint32_t arg_from_ret(const Type *types, uint32_t ret)
         return ret - 1;
 }
 
-static bool as_function(const Type *types, uint32_t idx, uint32_t *ret)
+static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *ret)
 {
         Type t = types[idx];
         if (t.delta <= 0) {
@@ -101,12 +101,12 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
                 return;
 
         uint32_t aret, bret;
-        bool a_is_fun = as_function(types, ia, &aret);
-        bool b_is_fun = as_function(types, ib, &bret);
+        bool a_is_fun = as_fun_type(types, ia, &aret);
+        bool b_is_fun = as_fun_type(types, ib, &bret);
 
         if (!a_is_fun && b_is_fun) {
                 // Copy the contents of B into A, so that we can discard B.
-                replace_with_function(types, ia, bret);
+                replace_with_fun_type(types, ia, bret);
         }
         replace_with_prior_link(types, ib, ia);
 
@@ -124,14 +124,14 @@ static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
 
         ifun = relink_to_first(types, ifun);
         uint32_t old_iret;
-        if (as_function(types, ifun, &old_iret)) {
+        if (as_fun_type(types, ifun, &old_iret)) {
                 uint32_t old_iarg = arg_from_ret(types, old_iret);
                 unify(types, old_iarg, iret - 1);
                 unify(types, old_iret, iret);
                 return;
         }
 
-        replace_with_function(types, ifun, iret);
+        replace_with_fun_type(types, ifun, iret);
 }
 
 static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
@@ -216,19 +216,19 @@ static void unparse_pop(Unparser *unp)
         unp->depth = depth;
 }
 
-static void unparse_function_expansion(Unparser *unp, uint32_t idx);
+static void unparse_fun_expansion(Unparser *unp, uint32_t idx);
 
 static void unparse_type_(Unparser *unp, uint32_t idx)
 {
         idx = first_occurrence(unp->types, idx);
         print_typename(unp->oot, unp->exprs, idx);
-        unparse_function_expansion(unp, idx);
+        unparse_fun_expansion(unp, idx);
 }
 
-static void unparse_function_expansion(Unparser *unp, uint32_t idx)
+static void unparse_fun_expansion(Unparser *unp, uint32_t idx)
 {
         uint32_t iret;
-        if (!as_function(unp->types, idx, &iret)) {
+        if (!as_fun_type(unp->types, idx, &iret)) {
                 return;
         }
 
