@@ -30,6 +30,9 @@ static void unparse(FILE *oot, const AstNode *nodes, uint32_t idx)
                 fputc(']', oot);
                 unparse(oot, nodes, ast_lambda_body(nodes, idx));
                 return;
+        case ANT_BOUND:
+                fputc(val + '1', oot);
+                return;
         }
         DIE_LCOV_EXCL_LINE("Unparsing found Ast node %u with bad type id %u",
                            idx, node_t);

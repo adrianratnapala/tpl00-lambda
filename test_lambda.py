@@ -161,6 +161,9 @@ def test_forced_right_associated_call():
 def MULTIBYTE_VAR_MSG(name):
         return "Multi-byte varnames aren't allowed.  '{}'".format(name)
 
+def MULTIDIGIT_NUM_MSG(n):
+        return "Multi-digit nums aren't allowed.  '{}'".format(n)
+
 def UNMATCHED_MSG(thing):
         return"Unmatched '('".format(thing)
 
@@ -461,3 +464,20 @@ def test_type_lambda_const():
         assert Z == ('Z', None)
         assert X == ('X', None)
         assert Xf == ('Xf', '[X](X Z)')
+
+def test_parse_lambda_eye():
+        assert X.ok('[]1') == debruijn('[]1')
+
+def test_parse_error_multi_digit_boundvar():
+        assert X.err(FILENAME(), 2, MULTIDIGIT_NUM_MSG('21')) == \
+                debruijn('[]21').parse_err()
+
+def test_parse_error_zero_is_invalid_debrunin_index():
+        assert X.err(FILENAME(), 2, "0 is an invalid debrujin index") == \
+                debruijn('[]0').parse_err()
+
+def test_type_with_numerical_boundvars():
+        _1, At, Atf = types('[]1')
+        assert _1 == ('1', None)
+        assert At == ('@', None)
+        assert Atf == ('@f', '[@](@ 1)')

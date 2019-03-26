@@ -10,7 +10,7 @@
 #include "lambda.h"
 #include "untestable.h"
 
-#define MAX_TOKS 26
+#define MAX_TOKS (26 + 9)
 #define MAX_DEPTH 16
 
 typedef struct Type Type;
@@ -23,11 +23,17 @@ static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
 {
         int k = 0;
         int32_t val = idx;
-        while (ANT_CALL == ast_unpack(exprs, val, &val)) {
+        AstNodeType tag;
+        while (ANT_CALL == (tag = ast_unpack(exprs, val, &val))) {
                 k++;
         }
 
-        fputc(val + 'A', oot);
+        uint32_t tok = val + 'A';
+        if (tag == ANT_BOUND) {
+                tok = val + '1';
+        }
+
+        fputc(tok, oot);
         while (k--) {
                 fputc('r', oot);
         }
@@ -157,14 +163,15 @@ static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
         unify(types, old_iret, iret);
 }
 
-static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
+static void bind_to_typevar(TypeGraph *tg, uint32_t target, int32_t tok)
 {
+        uint32_t bidx = 9 + tok;
         DIE_IF(tok > MAX_TOKS, "Overbig token %u", tok);
-        Type *binding = tg->bindings[tok];
+        Type *binding = tg->bindings[bidx];
         if (binding) {
                 replace_with_prior_link(tg->types, target, binding - tg->types);
         } else {
-                tg->bindings[tok] = tg->types + target;
+                tg->bindings[bidx] = tg->types + target;
         }
 }
 
@@ -191,6 +198,9 @@ static void infer_new_type(TypeGraph *tg, uint32_t idx)
                 return;
         case ANT_LAMBDA:
                 coerce_lambda(tg->types, idx, idx - 2);
+                return;
+        case ANT_BOUND:
+                bind_to_typevar(tg, -idx, val);
                 return;
         }
         DIE_LCOV_EXCL_LINE("Typing found expr %u with bad tag %d", idx, tag);

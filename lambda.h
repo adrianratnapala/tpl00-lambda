@@ -13,6 +13,7 @@ typedef enum
         ANT_VAR = 1,
         ANT_CALL,
         ANT_LAMBDA,
+        ANT_BOUND,
 } AstNodeType;
 
 // FIX: rename to AstVar
@@ -32,6 +33,10 @@ typedef struct {
         int32_t arg_size;
 } AstCall;
 
+typedef struct {
+        int32_t depth;
+} AstBound;
+
 // A node in the AST.
 typedef struct {
         uint32_t type;
@@ -39,6 +44,7 @@ typedef struct {
         union {
                 AstCall CALL;
                 AstVar VAR;
+                AstBound BOUND;
         };
 } AstNode;
 
@@ -65,6 +71,9 @@ static inline AstNodeType ast_unpack(const AstNode *nodes, uint32_t idx,
                        n.type);
                 *val = n.VAR.token;
                 return ANT_LAMBDA;
+        case ANT_BOUND:
+                *val = n.BOUND.depth;
+                return ANT_BOUND;
         }
         return (AstNodeType)DIE_LCOV_EXCL_LINE(
             "Upacking Ast node %u with bad type id %u", idx, n.type);

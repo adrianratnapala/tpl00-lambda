@@ -152,6 +152,29 @@ static const char *lex_varname(Ast *ast, int32_t *idxptr, const char *z0)
         return z;
 }
 
+static uint8_t idx_from_digit(char c) { return (uint8_t)c - (uint8_t)'0'; }
+
+static const char *lex_int(Ast *ast, int32_t *idxptr, const char *z0)
+{
+        uint8_t idx = idx_from_digit(*z0);
+        if (idx >= 10) {
+                *idxptr = -1;
+                return z0;
+        }
+        *idxptr = idx;
+
+        const char *z = z0 + 1;
+        if (idx_from_digit(*z) >= 10) {
+                return z;
+        }
+
+        while (idx_from_digit(*z) < 10)
+                z++;
+        add_syntax_error(ast, z0, "Multi-digit nums aren't allowed.  '%.*s'",
+                         z - z0, z0);
+        return z;
+}
+
 static void push_varname(Ast *ast, int32_t token)
 {
         DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
@@ -164,6 +187,16 @@ static void push_varname(Ast *ast, int32_t token)
         };
 }
 
+static void push_bound(Ast *ast, int32_t depth)
+{
+        DIE_IF(depth < 0, "Bad depth %u.", depth);
+
+        AstNode *pn = ast_node_alloc(ast, 1);
+        *pn = (AstNode){
+            .type = ANT_BOUND,
+            .BOUND = {.depth = depth},
+        };
+}
 static const char *parse_expr(Ast *ast, const char *z0);
 static const char *parse_non_call_expr(Ast *ast, const char *z0);
 
@@ -211,6 +244,16 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
         const char *zE = lex_varname(ast, &token, z0);
         if (token >= 0) {
                 push_varname(ast, token);
+                return zE;
+        }
+        zE = lex_int(ast, &token, z0);
+        if (token >= 0) {
+                if (token == 0) {
+                        add_syntax_error(ast, z0,
+                                         "0 is an invalid debrujin index");
+                        token++;
+                }
+                push_bound(ast, token - 1);
                 return zE;
         }
 
