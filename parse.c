@@ -190,7 +190,7 @@ static const char *parse_expr(Ast *ast, const char *z0)
         const char *z = parse_non_call_expr(ast, z0);
         if (!z) {
                 add_syntax_error(ast, z0, "Expected expr");
-                return z0;
+                return NULL;
         }
 
         for (;;) {
@@ -226,7 +226,8 @@ Ast *parse(const char *zname, const char *zsrc)
         }
 
         const char *zE = parse_expr(ast, zsrc);
-        DIE_IF(*zE, "Unused bytes after program source: '%.*s...'", 10, zE);
+        DIE_IF(zE && *zE, "Unused bytes after program source: '%.*s...'", 10,
+               zE);
 
         return ast;
 }
