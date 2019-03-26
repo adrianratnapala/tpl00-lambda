@@ -12,7 +12,7 @@
 // ------------------------------------------------------------------
 static void unparse(FILE *oot, const AstNode *nodes, uint32_t idx)
 {
-        uint32_t val;
+        int32_t val;
         AstNodeType node_t = ast_unpack(nodes, idx, &val);
         switch (node_t) {
         case ANT_VAR:

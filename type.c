@@ -21,7 +21,7 @@ struct Type {
 static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
 {
         int k = 0;
-        uint32_t val = idx;
+        int32_t val = idx;
         while (ANT_CALL == ast_unpack(exprs, val, &val)) {
                 k++;
         }
@@ -156,7 +156,7 @@ static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
 
 static void infer_new_type(TypeGraph *tg, uint32_t idx)
 {
-        uint32_t val;
+        int32_t val;
         AstNodeType tag = ast_unpack(tg->exprs, idx, &val);
         switch (tag) {
         case ANT_VAR:

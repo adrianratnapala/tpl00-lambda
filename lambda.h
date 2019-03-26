@@ -17,7 +17,7 @@ typedef enum
 // FIX: rename to AstVar
 // AstVar represents a named variable in the AST.
 typedef struct {
-        uint32_t token;
+        int32_t token;
 } AstVar;
 
 // AstCall represents a call of a function.  This relies on post-fix ordering of
@@ -28,7 +28,7 @@ typedef struct {
 //        AstNode *callee   = call - call->CALL.arg_size - 1;
 //
 typedef struct {
-        uint32_t arg_size;
+        int32_t arg_size;
 } AstCall;
 
 // A node in the AST.
@@ -46,7 +46,7 @@ typedef struct Ast Ast;
 
 // Decodes an CALL AstNode into a function and argument pointer.
 static inline AstNodeType ast_unpack(const AstNode *nodes, uint32_t idx,
-                                     uint32_t *val)
+                                     int32_t *val)
 {
         AstNode n = nodes[idx];
         switch ((AstNodeType)n.type) {

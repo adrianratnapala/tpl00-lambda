@@ -125,7 +125,7 @@ static const char *eat_white(const char *z0)
 
 static uint8_t idx_from_letter(char c) { return (uint8_t)c - (uint8_t)'a'; }
 
-static const char *lex_varname(Ast *ast, uint32_t *idxptr, const char *z0)
+static const char *lex_varname(Ast *ast, int32_t *idxptr, const char *z0)
 {
         uint8_t idx = idx_from_letter(*z0);
         if (idx >= 26) {
@@ -146,7 +146,7 @@ static const char *lex_varname(Ast *ast, uint32_t *idxptr, const char *z0)
         return z;
 }
 
-static void push_varname(Ast *ast, uint32_t token)
+static void push_varname(Ast *ast, int32_t token)
 {
         DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
 
@@ -161,7 +161,7 @@ static const char *parse_expr(Ast *ast, const char *z0);
 
 static const char *parse_non_call_expr(Ast *ast, const char *z0)
 {
-        uint32_t token;
+        int32_t token;
         const char *zE = lex_varname(ast, &token, z0);
         if (zE) {
                 push_varname(ast, token);
