@@ -146,6 +146,17 @@ static const char *lex_varname(Ast *ast, uint32_t *idxptr, const char *z0)
         return z;
 }
 
+static void push_varname(Ast *ast, uint32_t token)
+{
+        DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
+
+        AstNode *pn = ast_node_alloc(ast, 1);
+        *pn = (AstNode){
+            .type = ANT_VAR,
+            .VAR = {.token = token},
+        };
+}
+
 static const char *parse_expr(Ast *ast, const char *z0);
 
 static const char *parse_non_call_expr(Ast *ast, const char *z0)
@@ -153,14 +164,7 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
         uint32_t token;
         const char *zE = lex_varname(ast, &token, z0);
         if (zE) {
-                DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
-
-                AstNode *pn = ast_node_alloc(ast, 1);
-                *pn = (AstNode){
-                    .type = ANT_VAR,
-                    .VAR = {.token = token},
-                };
-
+                push_varname(ast, token);
                 return zE;
         }
 
