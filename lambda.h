@@ -12,6 +12,7 @@ typedef enum
 {
         ANT_VAR = 1,
         ANT_CALL,
+        ANT_LAMBDA,
 } AstNodeType;
 
 // FIX: rename to AstVar
@@ -56,6 +57,14 @@ static inline AstNodeType ast_unpack(const AstNode *nodes, uint32_t idx,
         case ANT_VAR:
                 *val = n.VAR.token;
                 return ANT_VAR;
+        case ANT_LAMBDA:
+                DIE_IF(idx < 1, "lambda without arg-slot");
+                n = nodes[idx - 1];
+                DIE_IF(n.type != ANT_VAR,
+                       "lambda arg-slot should contain VAR, not tag = %u",
+                       n.type);
+                *val = n.VAR.token;
+                return ANT_LAMBDA;
         }
         return (AstNodeType)DIE_LCOV_EXCL_LINE(
             "Upacking Ast node %u with bad type id %u", idx, n.type);
@@ -63,7 +72,14 @@ static inline AstNodeType ast_unpack(const AstNode *nodes, uint32_t idx,
 
 static inline int32_t ast_arg_idx(const AstNode *nodes, uint32_t call_idx)
 {
+        assert(call_idx >= 1);
         return call_idx - 1;
+}
+
+static inline int32_t ast_lambda_body(const AstNode *nodes, uint32_t ilambda)
+{
+        assert(ilambda >= 2);
+        return ilambda - 2;
 }
 
 // --------------------------------------------------------------------------------------

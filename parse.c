@@ -165,6 +165,45 @@ static void push_varname(Ast *ast, int32_t token)
 }
 
 static const char *parse_expr(Ast *ast, const char *z0);
+static const char *parse_non_call_expr(Ast *ast, const char *z0);
+
+static const char *parse_lambda(Ast *ast, const char *z0)
+{
+        DIE_IF(*z0 != '[', "bad call to %s.", z0);
+        int32_t token;
+        const char *zE = eat_white(z0 + 1);
+        zE = lex_varname(ast, &token, zE);
+        zE = eat_white(zE);
+        if (*zE == ']') {
+                zE++;
+        } else {
+                size_t n = zE - z0;
+                if (*zE)
+                        n++;
+                // FIX: test this error
+                add_syntax_error(ast, z0, "Lambda '%.*s' doesn't end in ']'", n,
+                                 z0);
+        }
+
+        const char *zbody = zE;
+        zE = parse_non_call_expr(ast, zE);
+        if (!zE) {
+                add_syntax_error(ast, zbody, "Expected lambda body");
+                return NULL;
+        }
+
+        const AstNode *body = ast_root(ast);
+
+        // FIX: ast_root is a bad name
+
+        push_varname(ast, token);
+        AstNode *pn = ast_node_alloc(ast, 1);
+        *pn = (AstNode){
+            .type = ANT_LAMBDA,
+        };
+        assert(pn - body == 2);
+        return zE;
+}
 
 static const char *parse_non_call_expr(Ast *ast, const char *z0)
 {
@@ -183,7 +222,8 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
                         return zE;
                 }
                 return zE + 1;
-                // ... more cases here later ...
+        case '[':
+                return parse_lambda(ast, z0);
         }
 
         return NULL;

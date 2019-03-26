@@ -43,6 +43,13 @@ typedef struct {
         Type types[];
 } TypeGraph;
 
+typedef enum
+{
+        NOT_FUN,
+        MONO_FUN,
+        POLY_FUN,
+} FunTypeTag;
+
 static uint32_t first_occurrence(const Type *types, uint32_t idx)
 {
         Type t = types[idx];
@@ -82,16 +89,25 @@ static void replace_with_fun(Type *types, uint32_t ifun, uint32_t iarg,
         };
 }
 
-static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *arg,
-                        uint32_t *ret)
+static FunTypeTag as_fun_type(const Type *types, uint32_t idx, uint32_t *arg,
+                              uint32_t *ret)
 {
         Type t = types[idx];
-        if (t.delta <= 0) {
-                return false;
-        }
-        *ret = idx + t.delta;
         *arg = idx + t.delta_arg;
-        return true;
+        ;
+        if (t.delta <= 0) {
+                return NOT_FUN;
+        }
+
+        if (t.delta == 1) {
+                *ret = idx - 2;
+                return POLY_FUN;
+        }
+
+        // FIX? a free type (t.delta == 0) is a mono-fun?  Wikipedia agrees!
+        // https://en.wikipedia.org/wiki/Hindley-Milner_type_system#Let-polymorphism
+        *ret = idx + t.delta;
+        return MONO_FUN;
 }
 
 static void unify(Type *types, uint32_t ia, uint32_t ib);
@@ -152,8 +168,18 @@ static void bind_to_typevar(TypeGraph *tg, uint32_t target, uint32_t tok)
         }
 }
 
+static void coerce_lambda(Type *types, uint32_t ifun, uint32_t ibody)
+{
+        assert(ibody == ifun - 2);
+        types[ifun] = (Type){
+            .delta = 1, // FIX: magic number
+            .delta_arg = -1,
+        };
+}
+
 static void infer_new_type(TypeGraph *tg, uint32_t idx)
 {
+        // FIX: what if the lambda-param gets wrongly bound?
         int32_t val;
         AstNodeType tag = ast_unpack(tg->exprs, idx, &val);
         switch (tag) {
@@ -162,6 +188,9 @@ static void infer_new_type(TypeGraph *tg, uint32_t idx)
                 return;
         case ANT_CALL:
                 coerce_callee(tg->types, val, idx);
+                return;
+        case ANT_LAMBDA:
+                coerce_lambda(tg->types, idx, idx - 2);
                 return;
         }
         DIE_LCOV_EXCL_LINE("Typing found expr %u with bad tag %d", idx, tag);
@@ -235,7 +264,8 @@ static void unparse_type_(Unparser *unp, uint32_t idx)
 static void unparse_fun_expansion(Unparser *unp, uint32_t idx)
 {
         uint32_t iret, iarg;
-        if (!as_fun_type(unp->types, idx, &iarg, &iret)) {
+        FunTypeTag ft = as_fun_type(unp->types, idx, &iarg, &iret);
+        if (ft == NOT_FUN) {
                 return;
         }
 
@@ -244,7 +274,17 @@ static void unparse_fun_expansion(Unparser *unp, uint32_t idx)
         }
 
         FILE *oot = unp->oot;
-        fputs("=(", oot);
+
+        if (ft == POLY_FUN) {
+                fputs("f=", oot);
+                fputc('[', oot);
+                print_typename(oot, unp->exprs, iarg);
+                fputc(']', oot);
+        } else {
+                fputc('=', oot);
+        }
+
+        fputc('(', oot);
         unparse_type_(unp, iarg);
         fputc(' ', oot);
         unparse_type_(unp, iret);

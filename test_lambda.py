@@ -167,6 +167,9 @@ def UNMATCHED_MSG(thing):
 def EXPECTED_EXPR_MSG():
         return"Expected expr"
 
+def EXPECTED_LAMBDA_BODY_MSG():
+        return"Expected lambda body"
+
 def test_parse_error_unmatched_paren():
         assert X.err(FILENAME(), 0, UNMATCHED_MSG('(')) == \
                 run_lambda('(x').parse_err()
@@ -196,6 +199,10 @@ def test_bad_print_and_test_source_read():
 
 @pytest.fixture(params="xyz")
 def xname(request):
+        return request.param
+
+@pytest.fixture(params=[0, 1, 5])
+def padding(request):
         return request.param
 
 
@@ -430,3 +437,27 @@ def debruijn(src):
         assert R == run_lambda(R.out)
         return R
 
+def test_parse_lambda_const():
+        assert X.ok('[]z') == debruijn('[x]z')
+
+def test_parse_error_unterminated_lambda():
+        assert X.err(FILENAME(), 0, "Lambda '[)' doesn't end in ']'")\
+                == debruijn('[)z').parse_err()
+
+def test_parse_error_eof_instead_of_lambda_body(padding):
+        stem = '[]'
+        err_loc = len(stem) # error location ignores padding
+        assert X.err(FILENAME(), err_loc, EXPECTED_LAMBDA_BODY_MSG()) \
+                == debruijn(stem + ' '*padding).parse_err()
+
+def test_lambda_binds_tighter_than_call():
+        xout = '([]z y)'
+        unparse_only = dict(unparse=True)
+        assert X.ok(xout) == run_lambda('[]z y', args=unparse_only)
+        assert X.ok(xout) == run_lambda(xout,  args=unparse_only)
+
+def test_type_lambda_const():
+        Z, X, Xf = types('[x]z')
+        assert Z == ('Z', None)
+        assert X == ('X', None)
+        assert Xf == ('Xf', '[X](X Z)')

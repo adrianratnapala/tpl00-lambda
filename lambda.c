@@ -25,6 +25,11 @@ static void unparse(FILE *oot, const AstNode *nodes, uint32_t idx)
                 unparse(oot, nodes, ast_arg_idx(nodes, idx));
                 fputc(')', oot);
                 return;
+        case ANT_LAMBDA:
+                fputc('[', oot);
+                fputc(']', oot);
+                unparse(oot, nodes, ast_lambda_body(nodes, idx));
+                return;
         }
         DIE_LCOV_EXCL_LINE("Unparsing found Ast node %u with bad type id %u",
                            idx, node_t);
