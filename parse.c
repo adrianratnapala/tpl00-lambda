@@ -129,7 +129,8 @@ static const char *lex_varname(Ast *ast, int32_t *idxptr, const char *z0)
 {
         uint8_t idx = idx_from_letter(*z0);
         if (idx >= 26) {
-                return NULL;
+                *idxptr = -1;
+                return z0;
         }
         *idxptr = idx;
 
@@ -163,7 +164,7 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
 {
         int32_t token;
         const char *zE = lex_varname(ast, &token, z0);
-        if (zE) {
+        if (token >= 0) {
                 push_varname(ast, token);
                 return zE;
         }
