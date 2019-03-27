@@ -190,12 +190,13 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
 
 static const char *parse_expr(Ast *ast, const char *z0)
 {
-        z0 = eat_white(z0);
-
-        const char *z = parse_non_call_expr(ast, z0);
-        if (!z) {
-                add_syntax_error(ast, z0, "Expected expr");
-                return NULL;
+        const char *z, *z1 = eat_white(z0);
+        while (!(z = parse_non_call_expr(ast, z1))) {
+                if (!ast->error)
+                        add_syntax_error(ast, z0, "Expected expr");
+                if (!*z1)
+                        return NULL;
+                z1 = eat_white(z1 + 1);
         }
 
         for (;;) {

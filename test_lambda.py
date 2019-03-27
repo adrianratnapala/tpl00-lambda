@@ -36,14 +36,22 @@ class R(Result):
 
         parse_re = re.compile("(%s):(%s): Syntax error: (.*)[.]" %\
                 (fname_re, number_re))
+
         def parse_err(s):
+                return next(s._parse_errs())
+
+        def parse_errs(s):
+                return list(s._parse_errs())
+
+        def _parse_errs(s):
                 if len(s.err) < 1:
                         return s
-                m = s.parse_re.match(s.err[0] or '')
-                if not m:
-                        raise ValueError('"%s" !~ /%r/'
-                                % (s.err, s.parse_re))
-                return R(err = (m[1], int(m[2]), m[3]))
+                for line in s.err:
+                        m = s.parse_re.match(line)
+                        if not m:
+                                raise ValueError('"%s" !~ /%r/'
+                                        % (s.err, s.parse_re))
+                        yield R(err = (m[1], int(m[2]), m[3]))
 
 
 class X(Result):
@@ -165,6 +173,12 @@ def test_parse_error_multi_byte_varname():
 def test_parse_error_expected_expr():
         assert X.err(FILENAME(), 0, EXPECTED_EXPR_MSG()) == \
                 run_lambda('').parse_err()
+
+def test_scan_after_expected_expr_error():
+        assert run_lambda(')(').parse_errs() == [
+                X.err(FILENAME(), 0, EXPECTED_EXPR_MSG()),
+                X.err(FILENAME(), 1, UNMATCHED_MSG(')')),
+        ]
 
 def test_explicit_act_unparse():
         assert X.ok('x') == run_lambda('x', args={"unparse":True})
