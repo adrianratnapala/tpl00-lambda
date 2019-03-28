@@ -378,4 +378,20 @@ def test_out_of_order_after_prior_links():
         prog += " (c q)"  # C is too
         prog += " (x c)"  # A == C
         prog += " (x b)"  # B == A
-        print(types(prog))
+
+        N,\
+        X,  A,  Xr, Nr, \
+        B,  P,  Br, Nrr, \
+        C,  Q,  Cr, Nrrr, \
+        X2, C2, Xr2, Nrrrr, \
+        X3, B2, Xr3, Nrrrrr, \
+                = types(prog)
+
+        assert P == ('P', None)
+        assert Q == P
+
+        assert A == ('A', '(P Br)');
+        assert B == A;
+        assert C == A;
+
+
