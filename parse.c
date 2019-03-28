@@ -139,11 +139,10 @@ static const char *lex_varname(Ast *ast, int32_t *idxptr, const char *z0)
                 return z;
         }
 
-        add_syntax_error(
-            ast, z0, "Multi-byte varnames aren't allowed.  '%.*s...'", 10, z0);
-        do
+        while (idx_from_letter(*z) < 26)
                 z++;
-        while (idx_from_letter(*z) < 26);
+        add_syntax_error(ast, z0, "Multi-byte varnames aren't allowed.  '%.*s'",
+                         z - z0, z0);
         return z;
 }
 
