@@ -47,7 +47,7 @@ progs: dirs $(PROGS)
 
 .PHONY: test_without_coverage
 test_without_coverage: dirs $(PROGS)
-	USE_VALGRIND=$(USE_VALGRIND) $(PY_TEST)
+	USE_VALGRIND=$(USE_VALGRIND) $(PY_TEST) -v
 
 ifeq "$(COVERAGE)" "yes"
 test: coverage
