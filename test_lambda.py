@@ -423,4 +423,10 @@ def test_out_of_order_after_prior_links():
         assert B == A;
         assert C == A;
 
+def debruijn(src):
+        R = run_lambda(src)
+        if R.err is not None:
+                return R
+        assert R == run_lambda(R.out)
+        return R
 
