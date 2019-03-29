@@ -145,16 +145,26 @@ def test_auto_left_associated_call():
 def test_forced_right_associated_call():
         assert X.ok('((x y) z)') == run_lambda('x y z')
 
+def MULTIBYTE_VAR_MSG(name):
+        return "Multi-byte varnames aren't allowed.  '{}'".format(name)
+
+def UNMATCHED_MSG(thing):
+        return"Unmatched '('".format(thing)
+
+def EXPECTED_EXPR_MSG():
+        return"Expected expr"
+
 def test_parse_error_unmatched_paren():
-        assert X.err(FILENAME(), 0, "Unmatched '('") == \
+        assert X.err(FILENAME(), 0, UNMATCHED_MSG('(')) == \
                 run_lambda('(x').parse_err()
 
 def test_parse_error_multi_byte_varname():
-        assert X.err(FILENAME(), 0, "Multi-byte varnames aren't allowed.  'var'") == \
+        assert X.err(FILENAME(), 0, MULTIBYTE_VAR_MSG('var')) == \
                 run_lambda('var').parse_err()
 
 def test_parse_error_expected_expr():
-        assert X.err(FILENAME(), 0, "Expected expr") == run_lambda('').parse_err()
+        assert X.err(FILENAME(), 0, EXPECTED_EXPR_MSG()) == \
+                run_lambda('').parse_err()
 
 def test_explicit_act_unparse():
         assert X.ok('x') == run_lambda('x', args={"unparse":True})
