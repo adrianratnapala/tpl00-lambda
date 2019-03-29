@@ -78,6 +78,7 @@ static SyntaxError *add_syntax_error(Ast *ast, const char *zloc,
         size_t len = nprefix + nsuffix + 1;
         prefix = realloc_or_die(HERE, prefix, len + 1);
         memcpy(prefix + nprefix, suffix, nsuffix);
+        free(suffix);
         prefix[len - 1] = '.';
         prefix[len] = 0;
 
