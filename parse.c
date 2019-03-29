@@ -86,14 +86,19 @@ static SyntaxError *add_syntax_error(Ast *ast, const char *zloc,
         return ast->error = e;
 }
 
+static int print_syntax_errors(FILE *oot, const SyntaxError *e)
+{
+        if (!e)
+                return 0;
+        int n = print_syntax_errors(oot, e->prev);
+        fputs(e->zmsg, oot);
+        fputc('\n', oot);
+        return n + 1;
+}
+
 int report_syntax_errors(FILE *oot, Ast *ast)
 {
-        int n = 0;
-        for (const SyntaxError *pe = ast->error; pe; pe = pe->prev, n++) {
-                fputs(pe->zmsg, oot);
-                fputc('\n', oot);
-        }
-        return n;
+        return print_syntax_errors(oot, ast->error);
 }
 
 void delete_ast(Ast *ast)
