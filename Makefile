@@ -28,7 +28,7 @@ PROGS = $B/lambda
 build: progs
 
 # Like `build` but with additional goodies such as `clang-format`
-all: fmt progs
+all: fmt tags progs
 
 $B/lambda: \
         $B/lambda.o \
@@ -71,6 +71,8 @@ $B/parse.o: lambda.h untestable.h
 $B/type.o: lambda.h untestable.h
 $B/untestable.o: untestable.h
 
-
 fmt:
 	$(CLANG_FORMAT) -i *.c *.h
+
+tags:
+	ctags -R
