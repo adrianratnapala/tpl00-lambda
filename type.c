@@ -78,12 +78,8 @@ static void replace_with_fun_returning(Type *types, uint32_t ifun,
         types[ifun].delta = iret - ifun;
 }
 
-static uint32_t arg_from_ret(const Type *types, uint32_t ret)
-{
-        return ret - 1;
-}
-
-static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *ret)
+static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *arg,
+                        uint32_t *ret)
 {
         Type t = types[idx];
         if (t.delta <= 0) {
@@ -91,6 +87,7 @@ static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *ret)
         }
         uint32_t iret = idx + t.delta;
         *ret = iret;
+        *arg = iret - 1;
         return true;
 }
 
@@ -100,8 +97,9 @@ static void replace_subgraph_with_links(Type *types, uint32_t dest,
                                         uint32_t repl)
 {
         uint32_t dest_ret, repl_ret;
-        bool dest_is_fun = as_fun_type(types, dest, &dest_ret);
-        bool repl_is_fun = as_fun_type(types, repl, &repl_ret);
+        uint32_t dest_arg, repl_arg;
+        bool dest_is_fun = as_fun_type(types, dest, &dest_arg, &dest_ret);
+        bool repl_is_fun = as_fun_type(types, repl, &repl_arg, &repl_ret);
 
         if (!repl_is_fun && dest_is_fun) {
                 replace_with_fun_returning(types, repl, dest_ret);
@@ -109,8 +107,6 @@ static void replace_subgraph_with_links(Type *types, uint32_t dest,
 
         replace_with_prior_link(types, dest, repl);
         if (repl_is_fun && dest_is_fun) {
-                uint32_t repl_arg = arg_from_ret(types, repl_ret);
-                uint32_t dest_arg = arg_from_ret(types, dest_ret);
                 unify(types, repl_arg, dest_arg);
                 unify(types, repl_ret, dest_ret);
         }
@@ -128,17 +124,16 @@ static void unify(Type *types, uint32_t ia, uint32_t ib)
 
 static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
 {
+        uint32_t iarg = iret - 1;
         assert(ifun < iret);
 
         ifun = relink_to_first(types, ifun);
-        uint32_t old_iret;
-        if (!as_fun_type(types, ifun, &old_iret)) {
+        uint32_t old_iret, old_iarg;
+        if (!as_fun_type(types, ifun, &old_iarg, &old_iret)) {
                 replace_with_fun_returning(types, ifun, iret);
                 return;
         }
 
-        uint32_t old_iarg = arg_from_ret(types, old_iret);
-        uint32_t iarg = arg_from_ret(types, iret);
         unify(types, old_iarg, iarg);
         unify(types, old_iret, iret);
 }
@@ -236,8 +231,8 @@ static void unparse_type_(Unparser *unp, uint32_t idx)
 
 static void unparse_fun_expansion(Unparser *unp, uint32_t idx)
 {
-        uint32_t iret;
-        if (!as_fun_type(unp->types, idx, &iret)) {
+        uint32_t iret, iarg;
+        if (!as_fun_type(unp->types, idx, &iarg, &iret)) {
                 return;
         }
 
@@ -245,7 +240,6 @@ static void unparse_fun_expansion(Unparser *unp, uint32_t idx)
                 return;
         }
 
-        uint32_t iarg = arg_from_ret(unp->types, iret);
         FILE *oot = unp->oot;
         fputs("=(", oot);
         unparse_type_(unp, iarg);
