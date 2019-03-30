@@ -268,7 +268,9 @@ int act_type(FILE *oot, const Ast *ast)
         TypeGraph *tg = build_type_graph(ast);
 
         for (size_t k = 0; k < tg->size; k++) {
-                unparse_type(oot, tg, tg->types + k);
+                Type *t = tg->types + k;
+                DBG("type %lu: delta=%d", k, t->delta);
+                unparse_type(oot, tg, t);
                 fputc('\n', oot);
         }
 

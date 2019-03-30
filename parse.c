@@ -157,6 +157,7 @@ static void push_varname(Ast *ast, int32_t token)
         DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
 
         AstNode *pn = ast_node_alloc(ast, 1);
+        DBG("pushed expr %lu: VAR token=%d", pn - ast->nodes, token);
         *pn = (AstNode){
             .type = ANT_VAR,
             .VAR = {.token = token},
@@ -213,6 +214,8 @@ static const char *parse_expr(Ast *ast, const char *z0)
                 AstNode *call = ast_node_alloc(ast, 1);
                 *call =
                     (AstNode){.type = ANT_CALL, .CALL = {.arg_size = arg_size}};
+                DBG("pushed expr %lu: CALL arg_size=%lu", call - ast->nodes,
+                    arg_size);
         }
 }
 
