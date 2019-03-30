@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -155,7 +154,7 @@ static int do_actions(const LambdaConfig *conf, const Ast *ast)
 
 int main(int argc, char *const *argv)
 {
-        set_injected_faults(secure_getenv("INJECTED_FAULTS"));
+        init_debugging();
         LambdaConfig config = parse_argv_or_die(argc, argv);
 
         char *zsrc = read_stdin_or_exit(&config);

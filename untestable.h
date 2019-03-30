@@ -10,14 +10,9 @@ typedef struct {
 
 #define HERE ((SrcLoc){__LINE__, __FILE__, __func__})
 
-// Parse `faults` to activate any fault-injects defined there.  `faults` is a
-// comma-separated list of fault names, you are not allowed to supply the same
-// fault name more than once, or to use an unknown name.  The currently defined
-// faults are
-//
-// unreadable-bangs: file_errnum will fake an I/O error if it sees '!'.
-//
-extern void set_injected_faults(const char *faults);
+// Perform various actions to initialise debugging based on environment vars.
+// If not called, it is as if all the relevant vars are undefined.
+extern void init_debugging(void);
 
 // Returns realloc(buf, n), except it reports failures to stderr and abort()s.
 extern void *realloc_or_die(SrcLoc loc, void *buf, size_t n);

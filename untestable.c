@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -9,6 +10,7 @@
 #include "untestable.h"
 
 static bool fault_unreadable_bangs = false;
+static const char *dbg_log_list = NULL;
 
 void *realloc_or_die(SrcLoc loc, void *buf, size_t n)
 {
@@ -45,7 +47,13 @@ int file_errnum(FILE *fin, void *buf, size_t n)
         // LCOV_EXCL_STOP
 }
 
-void set_injected_faults(const char *faults)
+// Parse `faults` to activate any fault-injects defined there.  `faults` is a
+// comma-separated list of fault names, you are not allowed to supply the same
+// fault name more than once, or to use an unknown name.  The currently defined
+// faults are
+//
+// unreadable-bangs: file_errnum will fake an I/O error if it sees '!'.
+static void set_injected_faults(const char *faults)
 {
         if (!faults) {
                 return;
@@ -53,6 +61,12 @@ void set_injected_faults(const char *faults)
         if (!strcmp(faults, "unreadable-bangs")) {
                 fault_unreadable_bangs = true;
         }
+}
+
+void init_debugging(void)
+{
+        set_injected_faults(secure_getenv("INJECTED_FAULTS"));
+        dbg_log_list = secure_getenv("DEBUG");
 }
 
 // LCOV_EXCL_START
@@ -87,6 +101,20 @@ int die_if(SrcLoc loc, const char *cond, const char *zfmt, ...)
 }
 // LCOV_EXCL_STOP
 
+static bool ignore_dbg(SrcLoc loc)
+{
+        if (!dbg_log_list)
+                return true;
+
+        // LCOV_EXCL_START
+        size_t n = strlen(dbg_log_list);
+        if (n == 1 && dbg_log_list[0] == '*')
+                return false;
+
+        return 0 != strncmp(loc.file, dbg_log_list, n);
+        // LCOV_EXCL_STOP
+}
+
 // LCOV_EXCL_START
 static void dbg_va(SrcLoc loc, const char *zfmt, va_list va)
 {
@@ -99,6 +127,9 @@ static void dbg_va(SrcLoc loc, const char *zfmt, va_list va)
 
 void dbg(SrcLoc loc, const char *zfmt, ...)
 {
+        if (ignore_dbg(loc)) {
+                return;
+        }
         va_list va;
         va_start(va, zfmt);
         return dbg_va(loc, zfmt, va);
