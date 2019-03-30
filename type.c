@@ -72,9 +72,10 @@ static void replace_with_prior_link(Type *types, uint32_t idx, int32_t prior)
         types[idx] = (Type){.delta = prior - idx};
 }
 
-static void replace_with_fun_returning(Type *types, uint32_t ifun,
-                                       uint32_t iret)
+static void replace_with_fun(Type *types, uint32_t ifun, uint32_t iarg,
+                             uint32_t iret)
 {
+        assert(iarg + 1 == iret); // FIX: remove this constraint.
         types[ifun].delta = iret - ifun;
 }
 
@@ -102,7 +103,7 @@ static void replace_subgraph_with_links(Type *types, uint32_t dest,
         bool repl_is_fun = as_fun_type(types, repl, &repl_arg, &repl_ret);
 
         if (!repl_is_fun && dest_is_fun) {
-                replace_with_fun_returning(types, repl, dest_ret);
+                replace_with_fun(types, repl, dest_arg, dest_ret);
         }
 
         replace_with_prior_link(types, dest, repl);
@@ -130,7 +131,7 @@ static void coerce_callee(Type *types, uint32_t ifun, uint32_t iret)
         ifun = relink_to_first(types, ifun);
         uint32_t old_iret, old_iarg;
         if (!as_fun_type(types, ifun, &old_iarg, &old_iret)) {
-                replace_with_fun_returning(types, ifun, iret);
+                replace_with_fun(types, ifun, iarg, iret);
                 return;
         }
 
