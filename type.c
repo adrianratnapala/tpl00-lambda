@@ -16,6 +16,7 @@
 typedef struct Type Type;
 struct Type {
         int32_t delta;
+        int32_t delta_arg;
 };
 
 static void print_typename(FILE *oot, const AstNode *exprs, int32_t idx)
@@ -75,8 +76,10 @@ static void replace_with_prior_link(Type *types, uint32_t idx, int32_t prior)
 static void replace_with_fun(Type *types, uint32_t ifun, uint32_t iarg,
                              uint32_t iret)
 {
-        assert(iarg + 1 == iret); // FIX: remove this constraint.
-        types[ifun].delta = iret - ifun;
+        types[ifun] = (Type){
+            .delta = iret - ifun,
+            .delta_arg = iarg - ifun,
+        };
 }
 
 static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *arg,
@@ -86,9 +89,8 @@ static bool as_fun_type(const Type *types, uint32_t idx, uint32_t *arg,
         if (t.delta <= 0) {
                 return false;
         }
-        uint32_t iret = idx + t.delta;
-        *ret = iret;
-        *arg = iret - 1;
+        *ret = idx + t.delta;
+        *arg = idx + t.delta_arg;
         return true;
 }
 
