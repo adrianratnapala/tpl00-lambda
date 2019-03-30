@@ -85,6 +85,13 @@ def args_from(arg_dict):
                 args.append(a)
         return args
 
+def stderr_lines(text):
+        for line in text.split('\n'):
+                line = line.rstrip()
+                if not line: continue
+                if line.startswith('DBG: '): continue
+                yield line
+
 
 def run_lambda(input, faults_to_inject=(), args=None):
         env = dict()
@@ -105,12 +112,9 @@ def run_lambda(input, faults_to_inject=(), args=None):
         except subprocess.CalledProcessError as x:
                 print("CalledProcessError = ", x)
                 print("==> LAMBDA stderr <<<===\n%s\n=========" % cp.stderr)
-                elines = (line.strip() for line in  cp.stderr.split('\n'))
-                elines = [line for line in elines if line]
-                return R(err=elines, out=None)
+                return R(err=list(stderr_lines(cp.stderr)), out=None)
         for line in (l.strip() for l in cp.stderr.split('\n')):
-                if line:
-                        assert line.startswith('DBG: ')
+                assert not list(stderr_lines(cp.stderr))
         return R(out=cp.stdout)
 
 
