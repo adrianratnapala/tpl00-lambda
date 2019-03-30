@@ -86,3 +86,22 @@ int die_if(SrcLoc loc, const char *cond, const char *zfmt, ...)
         return die_va(loc, cond, zfmt, va);
 }
 // LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+static void dbg_va(SrcLoc loc, const char *zfmt, va_list va)
+{
+        fprintf(stderr, "DBG: %s:%d: in `%s`: ", loc.file, loc.line, loc.func);
+        vfprintf(stderr, zfmt, va);
+        fputc('\n', stderr);
+        fflush(stderr);
+        va_end(va);
+}
+
+void dbg(SrcLoc loc, const char *zfmt, ...)
+{
+        va_list va;
+        va_start(va, zfmt);
+        return dbg_va(loc, zfmt, va);
+}
+
+// LCOV_EXCL_STOP

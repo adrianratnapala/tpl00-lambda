@@ -35,10 +35,10 @@ extern int file_errnum(FILE *fin, void *buf, size_t n);
 extern int die(SrcLoc loc, const char *zmsg, ...)
     __attribute__((format(printf, 2, 3)));
 
-// If (COND) is nonzero, print it and format zmsg to stdout, then abort().
-// This check is unconditional, regardless s of macros like NDEBUG etc.  COND
-// is always evaluated exactly once.  But the zmsg... is only formated if COND
-// is true.
+// If (COND) is nonzero, print it and format zmsg to stderr, then abort().
+// This check is unconditional, regardless of macros like NDEBUG etc.  COND is
+// always evaluated exactly once.  But the zmsg... is only formated if COND is
+// true.
 #define DIE_IF(COND, ...)                                                      \
         do {                                                                   \
                 if (COND)                                                      \
@@ -46,5 +46,11 @@ extern int die(SrcLoc loc, const char *zmsg, ...)
         } while (0)
 extern int die_if(SrcLoc loc, const char *cond, const char *zmsg, ...)
     __attribute__((format(printf, 3, 4)));
+
+// Print a message to stderr, then abort(). The message begins with the prefix
+// "DBG: ", which the tests know to ignore.
+#define DBG(...) dbg(HERE, __VA_ARGS__)
+void dbg(SrcLoc loc, const char *zfmt, ...)
+    __attribute__((format(printf, 2, 3)));
 
 #endif // UNTESTABLE_2018_03_03_H
