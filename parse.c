@@ -22,6 +22,8 @@ struct Ast {
         uint32_t zsrc_len;
         uint32_t nnodes_alloced;
         uint32_t nnodes;
+        uint32_t current_depth;
+        uint32_t binding_depths[26];
         AstNode nodes[];
 };
 
@@ -192,11 +194,21 @@ static void push_bound(Ast *ast, int32_t depth)
         DIE_IF(depth < 0, "Bad depth %u.", depth);
 
         AstNode *pn = ast_node_alloc(ast, 1);
+        DBG("pushed expr %lu: BOUND depth=%d", pn - ast->nodes, depth);
         *pn = (AstNode){
             .type = ANT_BOUND,
             .BOUND = {.depth = depth},
         };
 }
+
+static void push_var(Ast *ast, int32_t token)
+{
+        DIE_IF(token + 'a' > 'z', "Bad token %u.", token);
+        uint32_t bdepth = ast->binding_depths[token];
+        return bdepth ? push_bound(ast, ast->current_depth - bdepth)
+                      : push_varname(ast, token);
+}
+
 static const char *parse_expr(Ast *ast, const char *z0);
 static const char *parse_non_call_expr(Ast *ast, const char *z0);
 
@@ -218,6 +230,16 @@ static const char *parse_lambda(Ast *ast, const char *z0)
                                  z0);
         }
 
+        uint32_t inner_depth = ast->current_depth + 1;
+        uint32_t sink = 0, *binding = &sink;
+        if (token >= 0)
+                binding = ast->binding_depths + token;
+        uint32_t prev_bound = *binding;
+
+        ast->current_depth = inner_depth;
+        *binding = inner_depth;
+
+        DBG("Bound token %d to depth=%u", token, inner_depth);
         const char *zbody = zE;
         zE = parse_non_call_expr(ast, zE);
         if (!zE) {
@@ -225,15 +247,18 @@ static const char *parse_lambda(Ast *ast, const char *z0)
                 return NULL;
         }
 
-        const AstNode *body = ast_root(ast);
-
         // FIX: ast_root is a bad name
+        const AstNode *body = ast_root(ast);
+        *binding = prev_bound;
+        ast->current_depth = inner_depth - 1;
 
         push_varname(ast, token);
         AstNode *pn = ast_node_alloc(ast, 1);
         *pn = (AstNode){
             .type = ANT_LAMBDA,
         };
+        DBG("pushed expr %lu: LAMBDA inner depth=%u", pn - ast->nodes,
+            inner_depth);
         assert(pn - body == 2);
         return zE;
 }
@@ -243,7 +268,7 @@ static const char *parse_non_call_expr(Ast *ast, const char *z0)
         int32_t token;
         const char *zE = lex_varname(ast, &token, z0);
         if (token >= 0) {
-                push_varname(ast, token);
+                push_var(ast, token);
                 return zE;
         }
         zE = lex_int(ast, &token, z0);

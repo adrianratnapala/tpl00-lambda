@@ -481,3 +481,12 @@ def test_type_with_numerical_boundvars():
         assert _1 == ('1', None)
         assert At == ('@', None)
         assert Atf == ('@f', '[@](@ 1)')
+
+def test_bound_vars_print_correctly():
+        src = '[x]x'
+        assert X.ok('[]1') == run_lambda(src)
+
+def test_bound_vars_nest_correctly():
+        src = '[x][y](x y)'
+        assert X.ok('[][](2 1)') == run_lambda(src)
+
