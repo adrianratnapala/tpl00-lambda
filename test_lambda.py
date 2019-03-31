@@ -111,7 +111,8 @@ def run_lambda(input, faults_to_inject=(), args=None):
                 cp.check_returncode()
         except subprocess.CalledProcessError as x:
                 print("CalledProcessError = ", x)
-                print("==> LAMBDA stderr <<<===\n%s\n=========" % cp.stderr)
+                print("==> LAMBDA stderr <<<===\n%s" % cp.stderr)
+                print("==> LAMBDA input <<<===\n%s\n=========" % input)
                 return R(err=list(stderr_lines(cp.stderr)), out=None)
         for line in (l.strip() for l in cp.stderr.split('\n')):
                 assert not list(stderr_lines(cp.stderr))
