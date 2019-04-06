@@ -73,10 +73,7 @@ end:
 
         if (nacts && conf.test_source_read) {
                 fprintf(stderr, "--test-source-read means read the then exit, "
-                                "it cannot be used along with actions:\n");
-                if (conf.actions.unparse) {
-                        fprintf(stderr, "    --unparse\n");
-                }
+                                "it cannot be used along with actions.\n");
                 fflush(stderr);
                 exit(1);
         }

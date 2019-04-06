@@ -192,7 +192,7 @@ def test_bad_print_and_test_source_read():
         assert X.err() == run_lambda('x', args={
                 "test_source_read":True,
                 "unparse":True,
-        }).match_err("--test-source-read means.*actions:")
+        }).match_err("--test-source-read means.*actions")
 
 @pytest.fixture(params="xyz")
 def xname(request):
