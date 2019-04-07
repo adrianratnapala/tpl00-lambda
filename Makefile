@@ -9,7 +9,7 @@ LDFLAGS= $(LDOPTFLAGS) $(COVFLAGS)
 CLANG_FORMAT=clang-format
 
 USE_VALGRIND?=no
-COVERAGE?=no
+COVERAGE?=yes
 TEST_MODE?=quick
 
 ifeq "$(TEST_MODE)" "full"
