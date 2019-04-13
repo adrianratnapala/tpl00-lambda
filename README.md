@@ -466,3 +466,117 @@ The next trick is to make the link *before* recursively unify()ing the
 substructure.  This prevents infinite looping: if we get to thesame point in
 the type-graph, unify will be a no-op because `ia == ib`.
 
+## Lambdas
+
+Now lets turn this language into something Turing (Church!) complete by adding
+lambdas -- i.e. function literals it actual definitions rather than mere
+placeholder variables.
+
+### Lambda Syntax
+
+
+We can define a function with:
+
+        [x] FUNCTION_BODY(x)
+
+This defines a function of a single param `x` with a function body which can
+use it as a variable.  The square-bracket is pronounced "lambda" (obviously)
+and a variable that refers to a lambda param is called abound variable.
+
+Notice the param name is not supposed to matter (though in practice we do
+preserve it, and also derive type names from it).  Thus:
+
+        [x]x
+
+And
+
+        [y]y
+
+Are the same function.  There is also a "normalised syntax"
+
+        []1
+
+For the same thing.  Here `1` is not meant as a numeric literal.  A number `N`
+it means "count back to the `N`th lambda.  Thus the following function are all
+the same:
+
+
+        [][][](1 2 3)
+        [x][y][z](z y x)
+        [z][x][y](y x z)
+
+And even
+
+        [x][x][x](x x x)
+
+
+This last is because inner definitions shadow outer definitions.  (FIX: test
+this.)
+
+You can also mix this syntaxes.  Thus
+
+        [x][y][x](1 2 3)
+
+has the same meaning.  In fact, the internal representation looks something like this.
+
+
+        [x][y][z](z y x)
+
+Parses to the AST (FIX: have an AST dumper like this):
+
+        00: BOUND 2
+        01: BOUND 1
+        02: BOUND 0
+        03: VAR z
+        04: LAMBDA 02
+        05: VAR y
+        06: LAMBDA 04
+        07: VAR x
+        08: LAMBDA 06
+
+### Typing Lambdas
+
+We say the type the identity function
+
+        []1
+
+is
+
+        [@](@ @)
+
+
+For types, `[]` is pronounced "for all".  So we this is the type function that
+maps value of *any* type to another value of the same type.
+
+This "for-all" nature makes the type *polymorphic* compare this to the
+monomorphic functions we had before.  Suppose:
+
+
+        (z x) : Zr
+
+Therefore
+
+        z : (X Zr)
+
+And so if the program contains
+
+        (z y)
+
+We can infer
+
+        y : X
+
+Because.  Whereas
+
+        []1 x : X
+        []1 y : Y
+
+
+And there is no way to infer a relation between `X` and `Y` -- because `[]1`
+works on all argument types.  (FIX: test this!).
+
+There is nothing shockingly interesting about how all this is implemented.  But
+let's look at how the type-graph and AST map.  For the program
+
+        [x][y][z](z y x)
+
